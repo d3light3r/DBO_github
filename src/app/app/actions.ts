@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { getCurrentEmployee } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { supabaseUrl, supabaseAnonKey } from "@/lib/env";
 import { distanceMeters } from "@/lib/geo";
 import { zoned } from "@/lib/time";
 import { lateMinutes, staleAfterMinutes, workedAndOvertime } from "@/lib/schedule";
@@ -88,7 +90,11 @@ export async function punch(_prev: PunchState, form: FormData): Promise<PunchSta
     if (error) return { ok: false, message: "Зураг хадгалж чадсангүй. Дахин оролдоно уу." };
     method = "TRIP";
   } else {
-    const list = (branches ?? []) as Branch[];
+    const all = (branches ?? []) as Branch[];
+    // Салбар оноогдсон ажилтан зөвхөн өөрийн салбартаа бүртгүүлнэ. Оноогоогүй бол аль ч салбарт.
+    const list = emp.branch_id ? all.filter((b) => b.id === emp.branch_id) : all;
+    if (emp.branch_id && list.length === 0)
+      return { ok: false, message: "Таны салбар идэвхгүй байна. Админд хандана уу." };
     const wifiBranch = ip ? list.find((b) => b.allowed_ips?.includes(ip)) : undefined;
     if (wifiBranch) {
       method = "WIFI";
@@ -109,7 +115,9 @@ export async function punch(_prev: PunchState, form: FormData): Promise<PunchSta
       if (best.d - tolerance > best.b.radius_meters)
         return {
           ok: false,
-          message: `Та ажлын байрнаас хол байна. Хамгийн ойр нь ${best.b.name}, ${best.d}м зайтай (зөвшөөрөх ${best.b.radius_meters}м).`,
+          message: emp.branch_id
+            ? `Та өөрийн ажлын байр (${best.b.name})-аас ${best.d}м зайтай байна (зөвшөөрөх ${best.b.radius_meters}м).`
+            : `Та ажлын байрнаас хол байна. Хамгийн ойр нь ${best.b.name}, ${best.d}м зайтай (зөвшөөрөх ${best.b.radius_meters}м).`,
         };
       method = "GPS";
       branchId = best.b.id;
@@ -207,10 +215,26 @@ export async function submitRequest(_prev: FormState, form: FormData): Promise<F
 
 export async function changePassword(_prev: FormState, form: FormData): Promise<FormState> {
   await getCurrentEmployee();
+  const current = String(form.get("current_password") ?? "");
   const pw = String(form.get("password") ?? "");
+  if (!current) return { ok: false, message: "Одоогийн нууц үгээ оруулна уу." };
   if (pw.length < 8) return { ok: false, message: "Нууц үг хамгийн багадаа 8 тэмдэгт." };
   if (pw !== String(form.get("password2") ?? "")) return { ok: false, message: "Нууц үг таарахгүй байна." };
+  if (pw === current) return { ok: false, message: "Шинэ нууц үг хуучнаасаа өөр байх ёстой." };
+
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { ok: false, message: "Дахин нэвтэрнэ үү." };
+  // Одоогийн нууц үгийг тусдаа (cookie-гүй) клиентээр шалгана, одоогийн нэвтрэлтэд нөлөөлөхгүй
+  const verifier = createSupabaseClient(supabaseUrl(), supabaseAnonKey(), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { error: verifyErr } = await verifier.auth.signInWithPassword({ email: user.email, password: current });
+  if (verifyErr) return { ok: false, message: "Одоогийн нууц үг буруу байна." };
+  await verifier.auth.signOut({ scope: "local" });
+
   const { error } = await supabase.auth.updateUser({ password: pw });
   if (error) return { ok: false, message: "Нууц үг солиход алдаа гарлаа." };
   return { ok: true, message: "Нууц үг солигдлоо." };
