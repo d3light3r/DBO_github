@@ -7,7 +7,8 @@ const env = (k) => {
   if (!v) throw new Error(`.env.local дотор ${k} алга`);
   return v;
 };
-const db = createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
+const url = (process.env.SUPABASE_URL || env("NEXT_PUBLIC_SUPABASE_URL")).replace(/\/+$/, "");
+const db = createClient(url, env("SUPABASE_SERVICE_ROLE_KEY"), {
   auth: { persistSession: false },
 });
 const phone = env("ADMIN_PHONE").replace(/\D/g, "");
