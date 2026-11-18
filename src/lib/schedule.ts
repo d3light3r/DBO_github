@@ -2,9 +2,16 @@ import type { Employee, Schedule } from "./types";
 import { daysBetween, timeToMinutes, ubDateTime, weekdayOf } from "./time";
 
 /** Тухайн өдөр ажилтны хувиарт ажлын өдөр мөн эсэх */
-export function isWorkDay(schedule: Schedule | null, emp: Pick<Employee, "cycle_anchor_date">, date: string, holidays: Set<string> = new Set()): boolean {
+export function isWorkDay(
+  schedule: Schedule | null,
+  emp: Pick<Employee, "cycle_anchor_date">,
+  date: string,
+  holidays: Set<string> = new Set(),
+  workDays: Set<string> = new Set(), // нэмэлт ажлын өдөр (амралтын өдөр байсан ч ажиллана)
+): boolean {
   if (!schedule) return false;
   if (schedule.kind === "fixed") {
+    if (workDays.has(date)) return true;
     if (holidays.has(date)) return false;
     return schedule.work_weekdays.includes(weekdayOf(date));
   }

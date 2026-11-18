@@ -3,6 +3,8 @@
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { punch } from "./actions";
 import { compressImage } from "@/lib/image";
+import { LocationHelp } from "./location-help";
+import { detectDevice } from "@/lib/device-detect";
 
 type Props = { isWorking: boolean; checkInAt: string | null; allowTrip: boolean };
 
@@ -32,6 +34,7 @@ export function PunchCard({ isWorking, checkInAt, allowTrip }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [geoHelp, setGeoHelp] = useState<ReturnType<typeof detectDevice> | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,6 +61,7 @@ export function PunchCard({ isWorking, checkInAt, allowTrip }: Props) {
 
   async function onPunch() {
     setLocalError(null);
+    setGeoHelp(null);
     if (trip && !selfie) {
       fileRef.current?.click();
       return;
@@ -75,7 +79,7 @@ export function PunchCard({ isWorking, checkInAt, allowTrip }: Props) {
       const denied = (err as GeolocationPositionError)?.code === 1;
       if (denied) {
         setLocating(false);
-        setLocalError("Байршлын зөвшөөрөл өгөөгүй байна. Утасны тохиргооноос энэ апп-д байршил зөвшөөрнө үү.");
+        setGeoHelp(detectDevice(navigator.userAgent, navigator.maxTouchPoints));
         return;
       }
     }
@@ -137,7 +141,8 @@ export function PunchCard({ isWorking, checkInAt, allowTrip }: Props) {
         </div>
       )}
 
-      {(localError || state) && (
+      {geoHelp && <LocationHelp {...geoHelp} />}
+      {!geoHelp && (localError || state) && (
         <p
           className={`mt-4 rounded-lg px-3 py-2 text-sm ${
             localError || !state?.ok ? "bg-brand-soft text-brand" : "bg-emerald-50 text-emerald-700"

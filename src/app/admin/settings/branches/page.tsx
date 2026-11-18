@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Branch } from "@/lib/types";
+import { ConfirmButton } from "@/components/confirm-button";
+import { deleteBranch } from "../../actions";
 import { BranchForm } from "./branch-form";
 
 export default async function BranchesPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
@@ -12,7 +14,6 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Салбар, байршил</h1>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="card overflow-x-auto p-0">
           <table className="table">
@@ -29,7 +30,15 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
                   </td>
                   <td>{b.radius_meters}м</td>
                   <td className="text-xs">{b.allowed_ips.length ? b.allowed_ips.join(", ") : <span className="text-gray-400">Зөвхөн GPS</span>}</td>
-                  <td><a href={`?edit=${b.id}`} className="text-sm text-brand">Засах</a></td>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <a href={`?edit=${b.id}`} className="text-sm text-brand">Засах</a>
+                      <form action={deleteBranch}>
+                        <input type="hidden" name="id" value={b.id} />
+                        <ConfirmButton message={`«${b.name}» салбарыг устгах уу? Энэ салбарт оноогдсон ажилтнуудын салбар хоосон болно.`}>Устгах</ConfirmButton>
+                      </form>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {branches.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-gray-400">Салбар нэмээгүй байна</td></tr>}

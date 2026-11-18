@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { saveBranch } from "../actions";
+import { saveBranch } from "../../actions";
 import { FormMessage } from "@/components/form-message";
 import type { Branch } from "@/lib/types";
 
@@ -59,7 +59,7 @@ export function BranchForm({ branch }: { branch?: Branch }) {
       <FormMessage state={state} />
       <div className="flex gap-2">
         <button className="btn-primary" disabled={pending}>Хадгалах</button>
-        {branch && <Link href="/admin/branches" className="btn-ghost">Болих</Link>}
+        {branch && <Link href="/admin/settings/branches" className="btn-ghost">Болих</Link>}
       </div>
     </form>
   );

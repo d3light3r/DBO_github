@@ -44,3 +44,11 @@ test("УБ цагийн бүс, зай", () => {
   const d = distanceMeters(47.9186, 106.9177, 47.9189, 106.918);
   assert.ok(d > 30 && d < 50, String(d));
 });
+
+test("нэмэлт ажлын өдөр: амралтын өдөр ч ажлын өдөрт тооцно, баярыг давна", () => {
+  const sat = "2026-11-21"; // Бямба
+  assert.equal(isWorkDay(office, { cycle_anchor_date: null }, sat), false);
+  assert.equal(isWorkDay(office, { cycle_anchor_date: null }, sat, new Set(), new Set([sat])), true);
+  const mon = "2026-11-23"; // Даваа
+  assert.equal(isWorkDay(office, { cycle_anchor_date: null }, mon, new Set([mon]), new Set([mon])), true);
+});

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { saveSchedule } from "../actions";
+import { saveSchedule } from "../../actions";
 import { FormMessage } from "@/components/form-message";
 import { WEEKDAY_SHORT } from "@/lib/time";
 import type { Schedule } from "@/lib/types";
@@ -55,7 +55,7 @@ export function ScheduleForm({ schedule }: { schedule?: Schedule }) {
       <FormMessage state={state} />
       <div className="flex gap-2">
         <button className="btn-primary" disabled={pending}>Хадгалах</button>
-        {schedule && <Link href="/admin/schedules" className="btn-ghost">Болих</Link>}
+        {schedule && <Link href="/admin/settings/schedules" className="btn-ghost">Болих</Link>}
       </div>
     </form>
   );

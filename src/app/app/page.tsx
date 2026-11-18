@@ -4,6 +4,9 @@ import { fmtMinutes, fmtTime, todayUB, WEEKDAY_SHORT } from "@/lib/time";
 import { isWorkDay } from "@/lib/schedule";
 import type { AttendanceLog, Schedule } from "@/lib/types";
 import { PunchCard } from "./punch-card";
+import { DeviceCard } from "./device-card";
+import { deviceState } from "@/lib/device";
+import { loadCalendar } from "@/lib/calendar";
 
 export default async function EmployeeHome() {
   const emp = await getCurrentEmployee();
@@ -11,16 +14,18 @@ export default async function EmployeeHome() {
   const today = todayUB();
   const monthStart = `${today.slice(0, 7)}-01`;
 
-  const [{ data: open }, { data: todayLogs }, { data: month }, { data: schedule }, { data: branch }] = await Promise.all([
+  const [{ data: open }, { data: todayLogs }, { data: month }, { data: schedule }, { data: branch }, cal, device] = await Promise.all([
     db.from("attendance_logs").select("*").eq("employee_id", emp.id).eq("status", "working").maybeSingle(),
     db.from("attendance_logs").select("*").eq("employee_id", emp.id).eq("work_date", today).order("check_in_at"),
     db.from("attendance_logs").select("worked_minutes, late_minutes, overtime_minutes").eq("employee_id", emp.id).gte("work_date", monthStart),
     emp.schedule_id ? db.from("schedules").select("*").eq("id", emp.schedule_id).maybeSingle() : Promise.resolve({ data: null }),
     emp.branch_id ? db.from("branches").select("name").eq("id", emp.branch_id).maybeSingle() : Promise.resolve({ data: null }),
+    loadCalendar(emp.organization_id, today, today),
+    deviceState(emp),
   ]);
   const sched = schedule as Schedule | null;
   const openLog = open as AttendanceLog | null;
-  const workToday = isWorkDay(sched, emp, today);
+  const workToday = isWorkDay(sched, emp, today, cal.holidays, cal.workDays);
   const totals = (month ?? []).reduce(
     (a, r) => ({
       worked: a.worked + (r.worked_minutes ?? 0),
@@ -37,6 +42,7 @@ export default async function EmployeeHome() {
         checkInAt={openLog?.check_in_at ?? null}
         allowTrip={emp.allow_trip}
       />
+      {device.kind !== "approved" && device.kind !== "not_required" && <DeviceCard kind={device.kind} />}
 
       <section className="card">
         <h2 className="mb-2 text-sm font-semibold">Өнөөдөр</h2>

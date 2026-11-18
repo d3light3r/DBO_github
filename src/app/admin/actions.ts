@@ -36,8 +36,8 @@ export async function saveBranch(_p: FormState, f: FormData): Promise<FormState>
     ? await db.from("branches").update(row).eq("id", id).eq("organization_id", me.organization_id)
     : await db.from("branches").insert(row);
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/admin/branches");
-  if (id) redirect("/admin/branches");
+  revalidatePath("/admin/settings/branches");
+  if (id) redirect("/admin/settings/branches");
   return { ok: true, message: "Хадгаллаа." };
 }
 
@@ -67,8 +67,8 @@ export async function saveSchedule(_p: FormState, f: FormData): Promise<FormStat
     ? await db.from("schedules").update(row).eq("id", id).eq("organization_id", me.organization_id)
     : await db.from("schedules").insert(row);
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/admin/schedules");
-  if (id) redirect("/admin/schedules");
+  revalidatePath("/admin/settings/schedules");
+  if (id) redirect("/admin/settings/schedules");
   return { ok: true, message: "Хадгаллаа." };
 }
 
@@ -77,7 +77,37 @@ export async function addDepartment(f: FormData) {
   const me = await requireAdmin();
   const name = s(f, "name");
   if (name) await createAdminClient().from("departments").insert({ organization_id: me.organization_id, name });
+  revalidatePath("/admin/settings/departments");
+}
+
+export async function renameDepartment(f: FormData) {
+  const me = await requireAdmin();
+  const name = s(f, "name");
+  if (name) await createAdminClient().from("departments").update({ name }).eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath("/admin/settings/departments");
+}
+
+export async function deleteDepartment(f: FormData) {
+  const me = await requireAdmin();
+  // Ажилтнуудын хэлтэс хоосон болно (on delete set null)
+  await createAdminClient().from("departments").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath("/admin/settings/departments");
   revalidatePath("/admin/employees");
+}
+
+// ---------------- Салбар, хуваарь устгах ----------------
+export async function deleteBranch(f: FormData) {
+  const me = await requireAdmin();
+  await createAdminClient().from("branches").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath("/admin/settings/branches");
+  redirect("/admin/settings/branches");
+}
+
+export async function deleteSchedule(f: FormData) {
+  const me = await requireAdmin();
+  await createAdminClient().from("schedules").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath("/admin/settings/schedules");
+  redirect("/admin/settings/schedules");
 }
 
 // ---------------- Баярын өдөр ----------------
@@ -86,13 +116,13 @@ export async function addHoliday(f: FormData) {
   const date = s(f, "date");
   const name = s(f, "name");
   if (date && name) await createAdminClient().from("holidays").upsert({ organization_id: me.organization_id, date, name }, { onConflict: "organization_id,date" });
-  revalidatePath("/admin/schedules");
+  revalidatePath("/admin/settings/holidays");
 }
 
 export async function deleteHoliday(f: FormData) {
   const me = await requireAdmin();
   await createAdminClient().from("holidays").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/schedules");
+  revalidatePath("/admin/settings/holidays");
 }
 
 // ---------------- Ажилтан ----------------
@@ -196,4 +226,131 @@ export async function reviewAttendance(f: FormData) {
     .eq("review_status", "pending")
     .neq("employee_id", me.id); // өөрийнхөө томилолтыг өөрөө батлахгүй
   revalidatePath("/admin/attendance");
+}
+
+
+// ---------------- Нэмэлт ажлын өдөр ----------------
+export async function addWorkDay(f: FormData) {
+  const me = await requireAdmin();
+  const date = s(f, "date");
+  const name = s(f, "name");
+  if (date && name)
+    await createAdminClient().from("work_days").upsert({ organization_id: me.organization_id, date, name }, { onConflict: "organization_id,date" });
+  revalidatePath("/admin/settings/workdays");
+}
+
+export async function deleteWorkDay(f: FormData) {
+  const me = await requireAdmin();
+  await createAdminClient().from("work_days").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath("/admin/settings/workdays");
+}
+
+// ---------------- Утас бүртгэл ----------------
+export async function approveDevice(f: FormData) {
+  const me = await requireAdmin();
+  const db = createAdminClient();
+  const { data: dev } = await db
+    .from("devices")
+    .select("id, employee_id")
+    .eq("id", s(f, "id"))
+    .eq("organization_id", me.organization_id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (!dev) return;
+  // Нэг ажилтан нэг утастай: өмнөх батлагдсан утсыг цуцална
+  await db.from("devices").delete().eq("employee_id", dev.employee_id).eq("status", "approved");
+  await db
+    .from("devices")
+    .update({ status: "approved", approved_by: me.id, approved_at: new Date().toISOString() })
+    .eq("id", dev.id);
+  revalidatePath("/admin/settings/devices");
+}
+
+/** Хүсэлтээс татгалзах эсвэл батлагдсан утсыг цуцлах (утсыг дахин бүртгүүлэх боломжтой болно) */
+export async function removeDevice(f: FormData) {
+  const me = await requireAdmin();
+  await createAdminClient().from("devices").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath("/admin/settings/devices");
+}
+
+export async function setRequireDevice(f: FormData) {
+  const me = await requireAdmin();
+  await createAdminClient()
+    .from("organizations")
+    .update({ require_device: f.get("require_device") === "on" })
+    .eq("id", me.organization_id);
+  revalidatePath("/admin/settings/devices");
+}
+
+// ---------------- ШТС тохиргоо ----------------
+const STATION_PATH = "/admin/settings/station";
+const numOrNull = (f: FormData, k: string) => {
+  const v = s(f, k).replace(/[\s,]/g, "");
+  if (v === "") return null;
+  const x = Number(v);
+  return Number.isFinite(x) ? x : null;
+};
+
+export async function setStationBranch(f: FormData) {
+  const me = await requireAdmin();
+  await createAdminClient()
+    .from("branches")
+    .update({ is_station: f.get("is_station") === "on" })
+    .eq("id", s(f, "id"))
+    .eq("organization_id", me.organization_id);
+  revalidatePath(STATION_PATH);
+}
+
+export async function saveFuelType(f: FormData) {
+  const me = await requireAdmin();
+  const name = s(f, "name");
+  const price = numOrNull(f, "price");
+  if (!name || price == null || price < 0) return;
+  const db = createAdminClient();
+  const id = s(f, "id");
+  const row = { name, price, is_active: id ? f.get("is_active") === "on" : true };
+  if (id) await db.from("fuel_types").update(row).eq("id", id).eq("organization_id", me.organization_id);
+  else await db.from("fuel_types").insert({ ...row, organization_id: me.organization_id });
+  revalidatePath(STATION_PATH);
+}
+
+/** Сав, хошуу нь ээлжийн түүхэнд холбогдсон тул устгахгүй, идэвхгүй болгоно */
+async function stationBranchOf(orgId: string, branchId: string) {
+  const { data } = await createAdminClient().from("branches").select("id").eq("id", branchId).eq("organization_id", orgId).eq("is_station", true).maybeSingle();
+  return !!data;
+}
+
+export async function saveTank(f: FormData) {
+  const me = await requireAdmin();
+  const db = createAdminClient();
+  const id = s(f, "id");
+  const name = s(f, "name");
+  const fuelId = s(f, "fuel_type_id");
+  if (!name || !fuelId) return;
+  const { data: fuel } = await db.from("fuel_types").select("id").eq("id", fuelId).eq("organization_id", me.organization_id).maybeSingle();
+  if (!fuel) return;
+  const row = { name, fuel_type_id: fuelId, capacity_liters: numOrNull(f, "capacity_liters"), is_active: id ? f.get("is_active") === "on" : true };
+  if (id) {
+    await db.from("station_tanks").update(row).eq("id", id).eq("organization_id", me.organization_id);
+  } else {
+    const branchId = s(f, "branch_id");
+    if (!(await stationBranchOf(me.organization_id, branchId))) return;
+    await db.from("station_tanks").insert({ ...row, organization_id: me.organization_id, branch_id: branchId });
+  }
+  revalidatePath(STATION_PATH);
+}
+
+export async function saveNozzle(f: FormData) {
+  const me = await requireAdmin();
+  const db = createAdminClient();
+  const id = s(f, "id");
+  const name = s(f, "name");
+  const tankId = s(f, "tank_id");
+  if (!name || !tankId) return;
+  const { data: tank } = await db.from("station_tanks").select("id, branch_id").eq("id", tankId).eq("organization_id", me.organization_id).maybeSingle();
+  if (!tank) return;
+  const row = { name, tank_id: tankId, is_active: id ? f.get("is_active") === "on" : true };
+  if (id) await db.from("station_nozzles").update(row).eq("id", id).eq("organization_id", me.organization_id).eq("branch_id", tank.branch_id);
+  else await db.from("station_nozzles").insert({ ...row, organization_id: me.organization_id, branch_id: tank.branch_id });
+  revalidatePath(STATION_PATH);
 }

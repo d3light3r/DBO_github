@@ -42,6 +42,18 @@ export type Schedule = {
   late_grace_minutes: number;
 };
 
+export type Device = {
+  id: string;
+  organization_id: string;
+  employee_id: string;
+  token_hash: string;
+  label: string | null;
+  status: "pending" | "approved";
+  approved_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+};
+
 export type AttendanceLog = {
   id: string;
   employee_id: string;
@@ -92,4 +104,64 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Админ",
   manager: "Менежер",
   employee: "Ажилтан",
+};
+
+// ---------------- ШТС ----------------
+export type FuelType = { id: string; organization_id: string; name: string; price: number; is_active: boolean };
+
+export type Tank = {
+  id: string;
+  organization_id: string;
+  branch_id: string;
+  fuel_type_id: string;
+  name: string;
+  capacity_liters: number | null;
+  is_active: boolean;
+};
+
+export type Nozzle = { id: string; organization_id: string; branch_id: string; tank_id: string; name: string; is_active: boolean };
+
+export type StationShift = {
+  id: string;
+  organization_id: string;
+  branch_id: string;
+  status: "open" | "closed";
+  opened_by: string;
+  opened_at: string;
+  handover_expected: number;
+  handover_received: number;
+  closed_by: string | null;
+  closed_at: string | null;
+  sales_liters: number | null;
+  sales_amount: number | null;
+  pay_cash: number | null;
+  pay_card: number | null;
+  pay_coupon: number | null;
+  pay_credit: number | null;
+  difference: number | null;
+  handover_cash: number | null;
+  note: string | null;
+};
+
+export type ShiftReading = {
+  id: string;
+  shift_id: string;
+  nozzle_id: string;
+  start_reading: number;
+  end_reading: number | null;
+  price: number | null;
+  liters: number | null;
+  amount: number | null;
+};
+
+export type FuelReceipt = {
+  id: string;
+  branch_id: string;
+  tank_id: string;
+  shift_id: string | null;
+  liters: number;
+  doc_no: string | null;
+  supplier: string | null;
+  received_by: string;
+  received_at: string;
 };

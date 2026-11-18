@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type Employee } from "@/lib/types";
-import { addDepartment } from "../actions";
 import { EmployeeForm } from "./employee-form";
 import { loadOptions } from "./options";
 
@@ -39,10 +38,9 @@ export default async function EmployeesPage() {
         </div>
         <div className="space-y-6">
           <EmployeeForm {...opts} />
-          <form action={addDepartment} className="card flex gap-2">
-            <input name="name" className="input" placeholder="Шинэ хэлтэс (СЗА, ҮАА...)" required />
-            <button className="btn-ghost">Нэмэх</button>
-          </form>
+          <p className="text-xs text-gray-500">
+            Хэлтэс, салбар, хуваарийг <Link href="/admin/settings/departments" className="text-brand underline">Тохиргоо</Link> хэсгээс нэмнэ.
+          </p>
         </div>
       </div>
     </div>

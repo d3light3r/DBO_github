@@ -12,6 +12,8 @@ import { distanceMeters } from "@/lib/geo";
 import { zoned } from "@/lib/time";
 import { lateMinutes, staleAfterMinutes, workedAndOvertime } from "@/lib/schedule";
 import type { Branch, RequestType, Schedule } from "@/lib/types";
+import { DEVICE_MESSAGES, deviceState, deviceTokenHash } from "@/lib/device";
+import { deviceLabel } from "@/lib/device-detect";
 
 export type PunchState = { ok: boolean; message: string } | null;
 
@@ -37,6 +39,13 @@ function num(v: FormDataEntryValue | null): number | null {
 export async function punch(_prev: PunchState, form: FormData): Promise<PunchState> {
   const emp = await getCurrentEmployee();
   const db = createAdminClient();
+
+  // Зөвхөн админ баталсан, өөрийн утаснаас бүртгүүлнэ (өөр хүний эрхээр нэвтэрч дарахаас сэргийлнэ)
+  const dev = await deviceState(emp);
+  if (dev.kind !== "approved" && dev.kind !== "not_required") return { ok: false, message: DEVICE_MESSAGES[dev.kind] };
+  if (dev.kind === "approved")
+    await db.from("devices").update({ last_used_at: new Date().toISOString() }).eq("id", dev.device.id);
+
   const now = new Date(); // утасны биш, серверийн цаг
   const ip = await clientIp();
   const lat = num(form.get("lat"));
@@ -238,6 +247,31 @@ export async function changePassword(_prev: FormState, form: FormData): Promise<
   const { error } = await supabase.auth.updateUser({ password: pw });
   if (error) return { ok: false, message: "Нууц үг солиход алдаа гарлаа." };
   return { ok: true, message: "Нууц үг солигдлоо." };
+}
+
+/** Энэ утсыг ажилтанд бүртгүүлэх хүсэлт (админ батална) */
+export async function registerDevice(): Promise<FormState> {
+  const emp = await getCurrentEmployee();
+  const db = createAdminClient();
+  const hash = await deviceTokenHash(true);
+  if (!hash) return { ok: false, message: "Утсыг таньж чадсангүй." };
+  const { data: existing } = await db.from("devices").select("employee_id, status").eq("token_hash", hash).maybeSingle();
+  if (existing) {
+    if (existing.employee_id !== emp.id) return { ok: false, message: DEVICE_MESSAGES.other_employee };
+    return { ok: true, message: existing.status === "approved" ? "Энэ утас аль хэдийн батлагдсан." : DEVICE_MESSAGES.pending };
+  }
+  // Өмнөх батлагдаагүй хүсэлтийг шинээр солино
+  await db.from("devices").delete().eq("employee_id", emp.id).eq("status", "pending");
+  const ua = (await headers()).get("user-agent") ?? "";
+  const { error } = await db.from("devices").insert({
+    organization_id: emp.organization_id,
+    employee_id: emp.id,
+    token_hash: hash,
+    label: deviceLabel(ua),
+  });
+  if (error) return { ok: false, message: "Хүсэлт илгээж чадсангүй. Дахин оролдоно уу." };
+  revalidatePath("/app");
+  return { ok: true, message: "Хүсэлт илгээгдлээ. Админ батласны дараа цаг бүртгүүлэх боломжтой." };
 }
 
 export async function signOut() {

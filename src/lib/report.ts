@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "./supabase/admin";
 import { isWorkDay } from "./schedule";
+import { loadCalendar } from "./calendar";
 import { addDays, todayUB, zoned } from "./time";
 import type { AttendanceLog, Employee, Schedule } from "./types";
 
@@ -33,7 +34,7 @@ type Req = { employee_id: string; type: string; start_at: string; end_at: string
 
 export async function buildReport(orgId: string, from: string, to: string): Promise<ReportData> {
   const db = createAdminClient();
-  const [emps, scheds, branches, depts, logs, reqs, hols] = await Promise.all([
+  const [emps, scheds, branches, depts, logs, reqs, { holidays, workDays }] = await Promise.all([
     db.from("employees").select("*").eq("organization_id", orgId).order("full_name"),
     db.from("schedules").select("*").eq("organization_id", orgId),
     db.from("branches").select("id, name").eq("organization_id", orgId),
@@ -41,13 +42,12 @@ export async function buildReport(orgId: string, from: string, to: string): Prom
     db.from("attendance_logs").select("*").eq("organization_id", orgId).gte("work_date", from).lte("work_date", to).order("check_in_at"),
     db.from("requests").select("employee_id, type, start_at, end_at, total_hours").eq("organization_id", orgId).eq("status", "approved")
       .lte("start_at", `${addDays(to, 1)}T00:00:00+08:00`).gte("end_at", `${from}T00:00:00+08:00`),
-    db.from("holidays").select("date").eq("organization_id", orgId).gte("date", from).lte("date", to),
+    loadCalendar(orgId, from, to),
   ]);
 
   const schedMap = new Map((scheds.data as Schedule[] ?? []).map((x) => [x.id, x]));
   const branchMap = new Map((branches.data ?? []).map((x) => [x.id, x.name as string]));
   const deptMap = new Map((depts.data ?? []).map((x) => [x.id, x.name as string]));
-  const holidays = new Set((hols.data ?? []).map((h) => h.date as string));
   const allLogs = ((logs.data ?? []) as AttendanceLog[]).filter((l) => l.review_status !== "rejected");
   const requests = (reqs.data ?? []) as Req[];
   const lastDay = to < todayUB() ? to : todayUB();
@@ -75,7 +75,7 @@ export async function buildReport(orgId: string, from: string, to: string): Prom
     let absent = 0;
     let leaveDays = 0;
     for (let d = from; d <= to; d = addDays(d, 1)) {
-      if (!isWorkDay(sched, emp, d, holidays)) continue;
+      if (!isWorkDay(sched, emp, d, holidays, workDays)) continue;
       scheduled++;
       if (d > lastDay || presentDates.has(d)) continue;
       if (leaveDates.has(d)) leaveDays++;

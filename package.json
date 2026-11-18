@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "node --import tsx --test tests/*.test.ts",
     "setup": "node --env-file=.env.local scripts/setup.mjs",
+    "reset-password": "node --env-file=.env.local scripts/reset-password.mjs",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-build": "opennextjs-cloudflare build"
