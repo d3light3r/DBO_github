@@ -121,8 +121,22 @@ export async function saveEmployee(_p: FormState, f: FormData): Promise<FormStat
     is_active: id ? f.get("is_active") === "on" : true,
   };
 
+  // Хэлтэс, салбар, хуваарь нь заавал өөрийн байгууллагынх байх ёстой
+  const refs = [
+    ["departments", row.department_id],
+    ["branches", row.branch_id],
+    ["schedules", row.schedule_id],
+  ] as const;
+  for (const [table, refId] of refs) {
+    if (!refId) continue;
+    const { data: ok } = await db.from(table).select("id").eq("id", refId).eq("organization_id", me.organization_id).maybeSingle();
+    if (!ok) return { ok: false, message: "Сонгосон хэлтэс, салбар эсвэл хуваарь буруу байна." };
+  }
+
+  if (password && password.length < 8) return { ok: false, message: "Нууц үг хамгийн багадаа 8 тэмдэгт." };
+
   if (!id) {
-    if (password.length < 6) return { ok: false, message: "Анхны нууц үг хамгийн багадаа 6 тэмдэгт." };
+    if (!password) return { ok: false, message: "Анхны нууц үг оруулна уу." };
     const { data: created, error: authErr } = await db.auth.admin.createUser({
       email: phoneToEmail(phone),
       password,
@@ -149,7 +163,7 @@ export async function saveEmployee(_p: FormState, f: FormData): Promise<FormStat
     });
     if (authErr) return { ok: false, message: "Нэвтрэх мэдээллийг шинэчилж чадсангүй." };
   }
-  const { error } = await db.from("employees").update(row).eq("id", id);
+  const { error } = await db.from("employees").update(row).eq("id", id).eq("organization_id", me.organization_id);
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/employees");
   redirect("/admin/employees");
@@ -161,10 +175,11 @@ export async function reviewRequest(f: FormData) {
   const decision = s(f, "decision") === "approved" ? "approved" : "rejected";
   await createAdminClient()
     .from("requests")
-    .update({ status: decision, reviewed_by: me.id, reviewed_at: new Date().toISOString(), review_note: s(f, "review_note") || null })
+    .update({ status: decision, reviewed_by: me.id, reviewed_at: new Date().toISOString(), review_note: s(f, "review_note").slice(0, 1000) || null })
     .eq("id", s(f, "id"))
     .eq("organization_id", me.organization_id)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .neq("employee_id", me.id); // өөрийнхөө хүсэлтийг өөрөө батлахгүй
   revalidatePath("/admin/requests");
   revalidatePath("/admin");
 }
@@ -177,6 +192,8 @@ export async function reviewAttendance(f: FormData) {
     .from("attendance_logs")
     .update({ review_status: decision, reviewed_by: me.id, reviewed_at: new Date().toISOString() })
     .eq("id", s(f, "id"))
-    .eq("organization_id", me.organization_id);
+    .eq("organization_id", me.organization_id)
+    .eq("review_status", "pending")
+    .neq("employee_id", me.id); // өөрийнхөө томилолтыг өөрөө батлахгүй
   revalidatePath("/admin/attendance");
 }

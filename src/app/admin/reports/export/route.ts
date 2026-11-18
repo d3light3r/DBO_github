@@ -1,18 +1,15 @@
 import ExcelJS from "exceljs";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireStaffAdmin } from "@/lib/auth";
-import { buildReport } from "@/lib/report";
-import { fmtTime, todayUB } from "@/lib/time";
+import { buildReport, reportRange } from "@/lib/report";
+import { fmtTime } from "@/lib/time";
 
-const isDate = (s: string | null) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? "");
 const h = (min: number | null | undefined) => (min == null ? null : Math.round((min / 60) * 100) / 100);
 
 export async function GET(req: NextRequest) {
   const me = await requireStaffAdmin();
   const sp = req.nextUrl.searchParams;
-  const today = todayUB();
-  const from = isDate(sp.get("from")) ? sp.get("from")! : `${today.slice(0, 7)}-01`;
-  const to = isDate(sp.get("to")) ? sp.get("to")! : today;
+  const { from, to } = reportRange(sp.get("from"), sp.get("to"));
   const { rows, logs } = await buildReport(me.organization_id, from, to);
 
   const wb = new ExcelJS.Workbook();

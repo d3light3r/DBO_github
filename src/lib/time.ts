@@ -42,6 +42,24 @@ export function addDays(date: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+const MAX_RANGE_DAYS = 366;
+const isDate = (s?: string | null): s is string =>
+  /^\d{4}-\d{2}-\d{2}$/.test(s ?? "") && !Number.isNaN(Date.parse(s!));
+
+/** URL-аас ирсэн огноог шалгаж, тайлангийн мужийг 1 жилээр хязгаарлана (хэт том давталтаас сэргийлнэ) */
+export function reportRange(
+  fromParam?: string | null,
+  toParam?: string | null,
+  today: string = todayUB(),
+): { from: string; to: string } {
+  let from = isDate(fromParam) ? fromParam : `${today.slice(0, 7)}-01`;
+  const to = isDate(toParam) ? toParam : today;
+  if (from > to) from = to;
+  const minFrom = addDays(to, -(MAX_RANGE_DAYS - 1));
+  if (from < minFrom) from = minFrom;
+  return { from, to };
+}
+
 export function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
 }

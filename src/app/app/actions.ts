@@ -77,10 +77,14 @@ export async function punch(_prev: PunchState, form: FormData): Promise<PunchSta
     if (!(selfie instanceof File) || selfie.size === 0)
       return { ok: false, message: "Томилолтын үед сельфи зураг заавал шаардлагатай." };
     if (selfie.size > 4 * 1024 * 1024) return { ok: false, message: "Зураг хэт том байна." };
+    // Хэрэглэгчийн зааснаар биш, файлын агуулгаар JPEG эсэхийг шалгана
+    const head = new Uint8Array(await selfie.slice(0, 3).arrayBuffer());
+    if (head[0] !== 0xff || head[1] !== 0xd8 || head[2] !== 0xff)
+      return { ok: false, message: "Зургийн формат буруу байна." };
     selfiePath = `${emp.organization_id}/${emp.id}/${now.getTime()}.jpg`;
     const { error } = await db.storage
       .from("selfies")
-      .upload(selfiePath, selfie, { contentType: selfie.type || "image/jpeg" });
+      .upload(selfiePath, selfie, { contentType: "image/jpeg" });
     if (error) return { ok: false, message: "Зураг хадгалж чадсангүй. Дахин оролдоно уу." };
     method = "TRIP";
   } else {
@@ -181,6 +185,7 @@ export async function submitRequest(_prev: FormState, form: FormData): Promise<F
   const reason = String(form.get("reason") ?? "").trim();
   if (!REQUEST_TYPES.includes(type)) return { ok: false, message: "Хүсэлтийн төрлөө сонгоно уу." };
   if (!start || !end || !reason) return { ok: false, message: "Бүх талбарыг бөглөнө үү." };
+  if (reason.length > 1000) return { ok: false, message: "Шалтгаан хэт урт байна (1000 тэмдэгтээс ихгүй)." };
   // datetime-local утга нь УБ цагаар
   const startAt = new Date(`${start}:00+08:00`);
   const endAt = new Date(`${end}:00+08:00`);
@@ -203,7 +208,7 @@ export async function submitRequest(_prev: FormState, form: FormData): Promise<F
 export async function changePassword(_prev: FormState, form: FormData): Promise<FormState> {
   await getCurrentEmployee();
   const pw = String(form.get("password") ?? "");
-  if (pw.length < 6) return { ok: false, message: "Нууц үг хамгийн багадаа 6 тэмдэгт." };
+  if (pw.length < 8) return { ok: false, message: "Нууц үг хамгийн багадаа 8 тэмдэгт." };
   if (pw !== String(form.get("password2") ?? "")) return { ok: false, message: "Нууц үг таарахгүй байна." };
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: pw });

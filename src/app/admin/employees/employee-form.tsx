@@ -29,7 +29,7 @@ export function EmployeeForm({ departments, branches, schedules, employee }: Pro
         <div><label className="label">Утас (нэвтрэх нэр)</label><input name="phone" inputMode="tel" className="input" defaultValue={e?.phone} required /></div>
         <div>
           <label className="label">{e ? "Шинэ нууц үг (солих бол)" : "Анхны нууц үг"}</label>
-          <input name="password" className="input" autoComplete="new-password" required={!e} minLength={6} />
+          <input name="password" className="input" autoComplete="new-password" required={!e} minLength={8} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">

@@ -27,6 +27,8 @@ export type ReportData = {
   logs: (AttendanceLog & { employee_name: string; branch_name: string })[];
 };
 
+export { reportRange } from "./time";
+
 type Req = { employee_id: string; type: string; start_at: string; end_at: string; total_hours: number };
 
 export async function buildReport(orgId: string, from: string, to: string): Promise<ReportData> {

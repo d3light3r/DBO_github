@@ -1,15 +1,11 @@
 import { requireStaffAdmin } from "@/lib/auth";
-import { buildReport } from "@/lib/report";
-import { fmtMinutes, todayUB } from "@/lib/time";
-
-const isDate = (s?: string) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? "");
+import { buildReport, reportRange } from "@/lib/report";
+import { fmtMinutes } from "@/lib/time";
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   const me = await requireStaffAdmin();
   const sp = await searchParams;
-  const today = todayUB();
-  const from = isDate(sp.from) ? sp.from! : `${today.slice(0, 7)}-01`;
-  const to = isDate(sp.to) ? sp.to! : today;
+  const { from, to } = reportRange(sp.from, sp.to);
   const { rows } = await buildReport(me.organization_id, from, to);
   const qs = `from=${from}&to=${to}`;
 

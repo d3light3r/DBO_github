@@ -3,9 +3,9 @@ import "./globals.css";
 import { SwRegister } from "./sw-register";
 
 export const metadata: Metadata = {
-  title: "Цаг бүртгэл",
+  title: "DB",
   description: "Байгууллагын ажилтны цаг бүртгэлийн систем",
-  appleWebApp: { capable: true, title: "Цаг бүртгэл", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "DB", statusBarStyle: "default" },
   icons: { apple: "/icons/apple-touch-icon.png", icon: "/icons/icon-192.png" },
 };
 

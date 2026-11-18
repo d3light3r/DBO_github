@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Цаг бүртгэл",
-    short_name: "Цаг бүртгэл",
+    name: "DB",
+    short_name: "DB",
     description: "Ажилтны ирц бүртгэл",
     start_url: "/app",
     scope: "/",

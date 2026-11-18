@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <aside className="bg-gray-900 text-gray-200 md:sticky md:top-0 md:h-dvh md:w-60 md:shrink-0">
         <div className="flex items-center justify-between px-4 py-4 md:block">
           <div>
-            <span className="rounded bg-brand px-2 py-0.5 text-xs font-bold tracking-wider text-white">ЦАГ БҮРТГЭЛ</span>
+            <span className="rounded bg-brand px-2 py-0.5 text-xs font-bold tracking-wider text-white">DB</span>
             <p className="mt-2 hidden text-sm md:block">{me.full_name}</p>
             <p className="hidden text-xs text-gray-400 md:block">{ROLE_LABELS[me.role]}</p>
           </div>

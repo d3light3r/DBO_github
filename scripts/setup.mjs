@@ -13,7 +13,7 @@ const db = createClient(url, env("SUPABASE_SERVICE_ROLE_KEY"), {
 });
 const phone = env("ADMIN_PHONE").replace(/\D/g, "");
 const password = env("ADMIN_PASSWORD");
-if (password.length < 6) throw new Error("ADMIN_PASSWORD хамгийн багадаа 6 тэмдэгт");
+if (password.length < 8) throw new Error("ADMIN_PASSWORD хамгийн багадаа 8 тэмдэгт");
 
 const { data: existing } = await db.from("organizations").select("id").limit(1);
 if (existing?.length) {
