@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireStaffAdmin } from "@/lib/auth";
+import { requireStationPage } from "@/lib/station-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtLiters, fmtMoney, round3 } from "@/lib/station-calc";
 import { fmtDateTime } from "@/lib/time";
@@ -17,20 +17,25 @@ type Reading = {
 };
 type Measure = { id: string; liters: number; book_liters: number | null; tank: { name: string; fuel: { name: string } | null } | null };
 
-export default async function ShiftDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string>> }) {
-  const me = await requireStaffAdmin();
-  const { id } = await params;
+export default async function ShiftDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string; shiftId: string }>;
+  searchParams: Promise<Record<string, string>>;
+}) {
+  const { id: stationId, shiftId: id } = await params;
+  const { emp: me, station } = await requireStationPage(stationId);
   const back = new URLSearchParams(await searchParams).toString();
   const db = createAdminClient();
-  const { data } = await db.from("station_shifts").select("*").eq("id", id).eq("organization_id", me.organization_id).maybeSingle();
+  const { data } = await db.from("station_shifts").select("*").eq("id", id).eq("branch_id", station.id).maybeSingle();
   const s = data as StationShift | null;
   if (!s) notFound();
 
-  const [{ data: rd }, { data: ms }, { data: rc }, { data: br }, { data: emps }] = await Promise.all([
+  const [{ data: rd }, { data: ms }, { data: rc }, { data: emps }] = await Promise.all([
     db.from("shift_readings").select("id, start_reading, end_reading, price, liters, amount, nozzle:station_nozzles(name, tank:station_tanks(name, fuel:fuel_types(name)))").eq("shift_id", id),
     db.from("tank_measurements").select("id, liters, book_liters, tank:station_tanks(name, fuel:fuel_types(name))").eq("shift_id", id),
     db.from("fuel_receipts").select("*").eq("shift_id", id).order("received_at"),
-    db.from("branches").select("name").eq("id", s.branch_id).maybeSingle(),
     db.from("employees").select("id, full_name").eq("organization_id", me.organization_id),
   ]);
   const readings = ((rd ?? []) as unknown as Reading[]).sort((a, b) => (a.nozzle?.name ?? "").localeCompare(b.nozzle?.name ?? ""));
@@ -42,9 +47,9 @@ export default async function ShiftDetail({ params, searchParams }: { params: Pr
 
   return (
     <div className="max-w-4xl space-y-6">
-      <Link href={`/admin/station?${back}`} className="text-sm text-brand">← ШТС</Link>
+      <Link href={`/station/${station.id}/report?${back}`} className="text-sm text-brand">← Тайлан</Link>
       <div>
-        <h1 className="text-2xl font-bold">⛽ {br?.name} · ээлж</h1>
+        <h2 className="text-lg font-bold">Ээлжийн дэлгэрэнгүй</h2>
         <p className="text-sm text-gray-500">
           Нээсэн: {fmtDateTime(s.opened_at)} ({name(s.opened_by)}) · {s.closed_at ? `Хаасан: ${fmtDateTime(s.closed_at)} (${name(s.closed_by)})` : "Нээлттэй"}
         </p>

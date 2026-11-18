@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Branch } from "@/lib/types";
@@ -8,12 +9,15 @@ import { BranchForm } from "./branch-form";
 export default async function BranchesPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const me = await requireAdmin();
   const { edit } = await searchParams;
-  const { data } = await createAdminClient().from("branches").select("*").eq("organization_id", me.organization_id).order("name");
+  const { data } = await createAdminClient().from("branches").select("*").eq("organization_id", me.organization_id).eq("is_station", false).order("name");
   const branches = (data ?? []) as Branch[];
   const editing = branches.find((b) => b.id === edit);
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-gray-500">
+        ШТС-үүдийг (байршил, ажилтан, сав, хошуу) <Link href="/station" className="text-brand underline">⛽ ШТС апп</Link>-аас удирдана.
+      </p>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="card overflow-x-auto p-0">
           <table className="table">

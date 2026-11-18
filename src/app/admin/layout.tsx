@@ -14,7 +14,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <p className="mt-2 hidden text-sm md:block">{me.full_name}</p>
             <p className="hidden text-xs text-gray-400 md:block">{ROLE_LABELS[me.role]}</p>
           </div>
-          <Link href="/app" className="text-xs text-gray-400 hover:text-white md:mt-3 md:inline-block">← Ажилтны апп</Link>
+          <div className="flex gap-3 text-xs text-gray-400 md:mt-3 md:flex-col md:gap-1">
+            <Link href="/app" className="hover:text-white">← Ажилтны апп</Link>
+            <Link href="/station" className="hover:text-white">⛽ ШТС апп →</Link>
+          </div>
         </div>
         <AdminNav isAdmin={me.role === "admin"} />
       </aside>

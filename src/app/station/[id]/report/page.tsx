@@ -1,26 +1,30 @@
 import Link from "next/link";
-import { requireStaffAdmin } from "@/lib/auth";
+import { requireStationPage } from "@/lib/station-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadStationSetup, tankStatuses, type TankStatus } from "@/lib/station";
 import { fmtLiters, fmtMoney, round2, round3 } from "@/lib/station-calc";
 import { addDays, fmtDateTime, reportRange } from "@/lib/time";
 import type { FuelReceipt, StationShift } from "@/lib/types";
-import { Kpi } from "../kpi";
+import { Kpi } from "@/app/admin/kpi";
 
 type ReadingRow = { shift_id: string; liters: number | null; amount: number | null; nozzle: { tank: { fuel_type_id: string } | null } | null };
 
-export default async function StationReportPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; branch?: string }> }) {
-  const me = await requireStaffAdmin();
+export default async function StationReportPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
+  const { id: stationId } = await params;
+  const { emp: me, station } = await requireStationPage(stationId);
   const sp = await searchParams;
   const { from, to } = reportRange(sp.from, sp.to);
   const org = me.organization_id;
   const db = createAdminClient();
 
-  const { data: br } = await db.from("branches").select("id, name").eq("organization_id", org).eq("is_station", true).order("name");
-  const stations = br ?? [];
-  const branchId = stations.some((s) => s.id === sp.branch) ? sp.branch! : "";
-  const ids = branchId ? [branchId] : stations.map((s) => s.id);
-  const stationName = new Map(stations.map((s) => [s.id, s.name as string]));
+  const ids = [station.id];
+  const stationName = new Map([[station.id, station.name]]);
 
   const fromTs = `${from}T00:00:00+08:00`;
   const toTs = `${addDays(to, 1)}T00:00:00+08:00`;
@@ -67,31 +71,20 @@ export default async function StationReportPage({ searchParams }: { searchParams
 
   const sum = (k: keyof StationShift) => round2(shifts.reduce((a, s) => a + Number(s[k] ?? 0), 0));
   const shortage = round2(shifts.reduce((a, s) => a + Math.min(0, Number(s.difference ?? 0)), 0));
-  const qs = (extra: Record<string, string>) => new URLSearchParams({ from, to, ...(branchId ? { branch: branchId } : {}), ...extra }).toString();
+  const qs = new URLSearchParams({ from, to }).toString();
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-bold">⛽ ШТС</h1>
+        <h2 className="text-lg font-bold">Тайлан</h2>
         <form className="flex flex-wrap items-end gap-2">
-          <div>
-            <label className="label">Станц</label>
-            <select name="branch" defaultValue={branchId} className="input">
-              <option value="">Бүгд</option>
-              {stations.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
           <div><label className="label">Эхлэх</label><input type="date" name="from" defaultValue={from} className="input" /></div>
           <div><label className="label">Дуусах</label><input type="date" name="to" defaultValue={to} className="input" /></div>
           <button className="btn-ghost">Харах</button>
         </form>
       </div>
 
-      {stations.length === 0 ? (
-        <p className="card text-sm text-gray-500">
-          ШТС тохируулаагүй байна. {me.role === "admin" && <Link href="/admin/settings/station" className="text-brand underline">Тохиргоо → ШТС</Link>}
-        </p>
-      ) : (
+      {(
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             <Kpi label="Борлуулалт" value={fmtMoney(sum("sales_amount"))} />
@@ -105,7 +98,7 @@ export default async function StationReportPage({ searchParams }: { searchParams
           {openShifts.length > 0 && (
             <div className="card text-sm">
               <b>Нээлттэй ээлж:</b>{" "}
-              {openShifts.map((s) => `${stationName.get(s.branch_id)} (${fmtDateTime(s.opened_at)}, ${empName.get(s.opened_by) ?? ""})`).join(" · ")}
+              {openShifts.map((s) => `${fmtDateTime(s.opened_at)}-аас, ${empName.get(s.opened_by) ?? ""}`).join(" · ")}
             </div>
           )}
 
@@ -152,7 +145,7 @@ export default async function StationReportPage({ searchParams }: { searchParams
             <h2 className="px-3 pt-3 font-semibold">Ээлжүүд</h2>
             <table className="table">
               <thead>
-                <tr><th>Станц</th><th>Нээсэн</th><th>Хаасан</th><th className="text-right">Литр</th><th className="text-right">Борлуулалт</th><th className="text-right">Орлого</th><th className="text-right">Зөрүү</th><th></th></tr>
+                <tr><th>Нээсэн</th><th>Хаасан</th><th className="text-right">Литр</th><th className="text-right">Борлуулалт</th><th className="text-right">Орлого</th><th className="text-right">Зөрүү</th><th></th></tr>
               </thead>
               <tbody>
                 {shifts.map((s) => {
@@ -160,18 +153,17 @@ export default async function StationReportPage({ searchParams }: { searchParams
                   const d = Number(s.difference ?? 0);
                   return (
                     <tr key={s.id}>
-                      <td>{stationName.get(s.branch_id)}</td>
                       <td className="text-xs">{fmtDateTime(s.opened_at)}<span className="block text-gray-400">{empName.get(s.opened_by)}</span></td>
                       <td className="text-xs">{s.closed_at ? fmtDateTime(s.closed_at) : ""}<span className="block text-gray-400">{s.closed_by ? empName.get(s.closed_by) : ""}</span></td>
                       <td className="text-right tabular-nums">{fmtLiters(Number(s.sales_liters))}</td>
                       <td className="text-right tabular-nums">{fmtMoney(Number(s.sales_amount))}</td>
                       <td className="text-right tabular-nums">{fmtMoney(paid)}</td>
                       <td className={`text-right tabular-nums ${d < 0 ? "font-semibold text-brand" : d > 0 ? "text-amber-600" : "text-gray-400"}`}>{d === 0 ? "—" : fmtMoney(d)}</td>
-                      <td><Link href={`/admin/station/${s.id}?${qs({})}`} className="text-sm text-brand">Дэлгэрэнгүй</Link></td>
+                      <td><Link href={`/station/${station.id}/shift/${s.id}?${qs}`} className="text-sm text-brand">Дэлгэрэнгүй</Link></td>
                     </tr>
                   );
                 })}
-                {shifts.length === 0 && <tr><td colSpan={8} className="py-8 text-center text-gray-400">Энэ хугацаанд хаагдсан ээлж алга</td></tr>}
+                {shifts.length === 0 && <tr><td colSpan={7} className="py-8 text-center text-gray-400">Энэ хугацаанд хаагдсан ээлж алга</td></tr>}
               </tbody>
             </table>
           </section>
@@ -179,14 +171,13 @@ export default async function StationReportPage({ searchParams }: { searchParams
           <section className="card overflow-x-auto p-0">
             <h2 className="px-3 pt-3 font-semibold">Түлш хүлээн авалт</h2>
             <table className="table">
-              <thead><tr><th>Огноо</th><th>Станц</th><th>Сав</th><th className="text-right">Литр</th><th>Падаан</th><th>Нийлүүлэгч</th><th>Хүлээн авсан</th></tr></thead>
+              <thead><tr><th>Огноо</th><th>Сав</th><th className="text-right">Литр</th><th>Падаан</th><th>Нийлүүлэгч</th><th>Хүлээн авсан</th></tr></thead>
               <tbody>
                 {receipts.map((r) => {
                   const tank = tankRows.find((t) => t.s.tank.id === r.tank_id)?.s.tank;
                   return (
                     <tr key={r.id}>
                       <td className="text-xs">{fmtDateTime(r.received_at)}</td>
-                      <td>{stationName.get(r.branch_id)}</td>
                       <td>{tank ? `${tank.name} · ${tank.fuel.name}` : "—"}</td>
                       <td className="text-right tabular-nums">{fmtLiters(Number(r.liters))}</td>
                       <td>{r.doc_no ?? "—"}</td>
@@ -195,7 +186,7 @@ export default async function StationReportPage({ searchParams }: { searchParams
                     </tr>
                   );
                 })}
-                {receipts.length === 0 && <tr><td colSpan={7} className="py-6 text-center text-gray-400">Хүлээн авалт алга</td></tr>}
+                {receipts.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-gray-400">Хүлээн авалт алга</td></tr>}
               </tbody>
             </table>
           </section>

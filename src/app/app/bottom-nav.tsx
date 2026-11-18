@@ -10,15 +10,12 @@ const items = [
   { href: "/app/profile", label: "Миний", icon: "👤" },
 ];
 
-const station = { href: "/app/station", label: "ШТС", icon: "⛽" };
-
-export function BottomNav({ showStation = false }: { showStation?: boolean }) {
+export function BottomNav() {
   const path = usePathname();
-  const list = showStation ? [items[0], station, ...items.slice(1)] : items;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">
-      <ul className={`grid ${showStation ? "grid-cols-5" : "grid-cols-4"}`}>
-        {list.map((it) => {
+      <ul className="grid grid-cols-4">
+        {items.map((it) => {
           const active = it.href === "/app" ? path === "/app" : path.startsWith(it.href);
           return (
             <li key={it.href}>

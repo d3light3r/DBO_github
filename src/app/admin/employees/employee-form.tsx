@@ -34,7 +34,7 @@ export function EmployeeForm({ departments, branches, schedules, employee }: Pro
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Select name="department_id" label="Хэлтэс" options={departments} value={e?.department_id} />
-        <Select name="branch_id" label="Үндсэн салбар" options={branches} value={e?.branch_id} />
+        <Select name="branch_id" label="Салбар / ШТС (ирц бүртгэх байршил)" options={branches} value={e?.branch_id} />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Select name="schedule_id" label="Хуваарь" options={schedules} value={e?.schedule_id} />

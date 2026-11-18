@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-import { getCurrentEmployee } from "@/lib/auth";
+import Link from "next/link";
+import { requireStationPage } from "@/lib/station-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { lastReadings, loadStationSetup, tankStatuses } from "@/lib/station";
 import { fmtLiters, fmtMoney } from "@/lib/station-calc";
@@ -7,21 +7,19 @@ import { fmtDateTime } from "@/lib/time";
 import type { FuelReceipt, ShiftReading, StationShift } from "@/lib/types";
 import { CloseShiftForm, OpenShiftForm, ReceiptForm } from "./forms";
 
-export default async function StationPage() {
-  const emp = await getCurrentEmployee();
-  if (!emp.branch_id) redirect("/app");
+export default async function StationShiftPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { emp, station, isAdmin } = await requireStationPage(id);
   const db = createAdminClient();
-  const { data: branch } = await db.from("branches").select("name, is_station").eq("id", emp.branch_id).maybeSingle();
-  if (!branch?.is_station) redirect("/app");
 
   const [{ tanks, nozzles }, { data: openRow }, { data: recent }, { data: lastClosed }] = await Promise.all([
-    loadStationSetup(emp.organization_id, emp.branch_id),
-    db.from("station_shifts").select("*").eq("branch_id", emp.branch_id).eq("status", "open").maybeSingle(),
-    db.from("station_shifts").select("*").eq("branch_id", emp.branch_id).eq("status", "closed").order("closed_at", { ascending: false }).limit(5),
-    db.from("station_shifts").select("handover_cash").eq("branch_id", emp.branch_id).eq("status", "closed").order("closed_at", { ascending: false }).limit(1).maybeSingle(),
+    loadStationSetup(emp.organization_id, station.id),
+    db.from("station_shifts").select("*").eq("branch_id", station.id).eq("status", "open").maybeSingle(),
+    db.from("station_shifts").select("*").eq("branch_id", station.id).eq("status", "closed").order("closed_at", { ascending: false }).limit(5),
+    db.from("station_shifts").select("handover_cash").eq("branch_id", station.id).eq("status", "closed").order("closed_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const open = openRow as StationShift | null;
-  const statuses = await tankStatuses(emp.branch_id, tanks);
+  const statuses = await tankStatuses(station.id, tanks);
 
   const nozzleViews = nozzles.map((n) => ({ id: n.id, name: n.name, fuelName: n.fuel.name, price: n.fuel.price, tankId: n.tank_id }));
   const tankViews = statuses.map((s) => ({ id: s.tank.id, name: s.tank.name, fuelName: s.tank.fuel.name, book: s.book }));
@@ -40,13 +38,12 @@ export default async function StationPage() {
     receipts = (rc ?? []) as FuelReceipt[];
     openerName = opener?.full_name ?? "";
   }
-  const lastEnd = open ? {} : Object.fromEntries(await lastReadings(emp.branch_id));
+  const lastEnd = open ? {} : Object.fromEntries(await lastReadings(station.id));
   const tankName = new Map(tanks.map((t) => [t.id, `${t.name} · ${t.fuel.name}`]));
 
   return (
     <>
-      <section className="card -mt-8">
-        <p className="text-xs text-gray-500">⛽ {branch.name}</p>
+      <section className="card">
         {open ? (
           <>
             <h1 className="text-lg font-bold text-emerald-700">Ээлж нээлттэй</h1>
@@ -63,12 +60,15 @@ export default async function StationPage() {
       </section>
 
       {nozzles.length === 0 ? (
-        <section className="card text-sm text-gray-500">Энэ станцад сав, хошуу тохируулаагүй байна. Админд хандана уу.</section>
+        <section className="card text-sm text-gray-500">
+          Энэ станцад сав, хошуу тохируулаагүй байна.{" "}
+          {isAdmin ? <Link href={`/station/${station.id}/settings`} className="text-brand underline">Тохиргоо → Сав, хошуу нэмэх</Link> : "Админд хандана уу."}
+        </section>
       ) : open ? (
         <>
           <section className="card space-y-3">
             <h2 className="font-semibold">Түлш хүлээн авах</h2>
-            <ReceiptForm tanks={tankViews} />
+            <ReceiptForm stationId={station.id} tanks={tankViews} />
             {receipts.length > 0 && (
               <ul className="divide-y divide-gray-100 border-t border-gray-100 text-sm">
                 {receipts.map((r) => (
@@ -80,10 +80,10 @@ export default async function StationPage() {
               </ul>
             )}
           </section>
-          <CloseShiftForm nozzles={nozzleViews} starts={starts} tanks={tankViews} />
+          <CloseShiftForm stationId={station.id} nozzles={nozzleViews} starts={starts} tanks={tankViews} />
         </>
       ) : (
-        <OpenShiftForm nozzles={nozzleViews} lastEnd={lastEnd} handoverExpected={Number(lastClosed?.handover_cash ?? 0)} />
+        <OpenShiftForm stationId={station.id} nozzles={nozzleViews} lastEnd={lastEnd} handoverExpected={Number(lastClosed?.handover_cash ?? 0)} />
       )}
 
       {tankViews.length > 0 && (
@@ -109,8 +109,9 @@ export default async function StationPage() {
           <h2 className="mb-2 text-sm font-semibold">Сүүлийн ээлжүүд</h2>
           <ul className="divide-y divide-gray-100 text-sm">
             {((recent ?? []) as StationShift[]).map((s) => (
-              <li key={s.id} className="flex justify-between py-2">
-                <span className="text-xs text-gray-500">{s.closed_at ? fmtDateTime(s.closed_at) : ""}</span>
+              <li key={s.id}>
+                <Link href={`/station/${station.id}/shift/${s.id}`} className="flex justify-between py-2">
+                <span className="text-xs text-gray-500">{s.closed_at ? fmtDateTime(s.closed_at) : ""} ›</span>
                 <span className="text-right">
                   <b className="tabular-nums">{fmtMoney(Number(s.sales_amount))}</b>
                   {Number(s.difference) !== 0 && (
@@ -119,6 +120,7 @@ export default async function StationPage() {
                     </span>
                   )}
                 </span>
+                </Link>
               </li>
             ))}
           </ul>

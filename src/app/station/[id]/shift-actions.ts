@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCurrentEmployee } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEVICE_MESSAGES, deviceState } from "@/lib/device";
+import { stationContext } from "@/lib/station-access";
 import { loadStationSetup, tankStatuses } from "@/lib/station";
 import { round2, round3, shiftTotals, validateReading } from "@/lib/station-calc";
 import type { Employee, ShiftReading, StationShift } from "@/lib/types";
@@ -18,21 +18,21 @@ const num = (f: FormData, k: string): number | null => {
 };
 const money = (f: FormData, k: string) => Math.max(0, round2(num(f, k) ?? 0));
 
-/** ШТС-д оноогдсон, бүртгэлтэй утаснаас орсон ажилтан */
-async function requireStation(): Promise<{ emp: Employee; branchId: string } | { error: string }> {
-  const emp = await getCurrentEmployee();
-  if (!emp.branch_id) return { error: "Та ШТС-д оноогдоогүй байна." };
-  const db = createAdminClient();
-  const { data: branch } = await db.from("branches").select("is_station").eq("id", emp.branch_id).eq("organization_id", emp.organization_id).maybeSingle();
-  if (!branch?.is_station) return { error: "Таны салбар ШТС биш байна." };
+/** Станцад хандах эрхтэй (өөрийн станц эсвэл админ/менежер), бүртгэлтэй утаснаас орсон ажилтан */
+async function requireStation(f: FormData): Promise<{ emp: Employee; branchId: string } | { error: string }> {
+  const { emp, stations } = await stationContext();
+  const branchId = String(f.get("station_id") ?? "");
+  if (!stations.some((x) => x.id === branchId)) return { error: "Энэ ШТС-д хандах эрхгүй байна." };
   const dev = await deviceState(emp);
   if (dev.kind !== "approved" && dev.kind !== "not_required") return { error: DEVICE_MESSAGES[dev.kind] };
-  return { emp, branchId: emp.branch_id };
+  return { emp, branchId };
 }
+
+const stationPath = (id: string) => `/station/${id}`;
 
 // ---------------- Ээлж нээх ----------------
 export async function openShift(_prev: StationState, f: FormData): Promise<StationState> {
-  const ctx = await requireStation();
+  const ctx = await requireStation(f);
   if ("error" in ctx) return { ok: false, message: ctx.error };
   const { emp, branchId } = ctx;
   const db = createAdminClient();
@@ -76,13 +76,13 @@ export async function openShift(_prev: StationState, f: FormData): Promise<Stati
     await db.from("station_shifts").delete().eq("id", shift.id);
     return { ok: false, message: "Тоолуурын заалт хадгалж чадсангүй. Дахин оролдоно уу." };
   }
-  revalidatePath("/app/station");
+  revalidatePath(stationPath(branchId));
   return { ok: true, message: "Ээлж нээгдлээ. Амжилт!" };
 }
 
 // ---------------- Түлш хүлээн авах ----------------
 export async function addReceipt(_prev: StationState, f: FormData): Promise<StationState> {
-  const ctx = await requireStation();
+  const ctx = await requireStation(f);
   if ("error" in ctx) return { ok: false, message: ctx.error };
   const { emp, branchId } = ctx;
   const db = createAdminClient();
@@ -103,13 +103,13 @@ export async function addReceipt(_prev: StationState, f: FormData): Promise<Stat
     received_by: emp.id,
   });
   if (error) return { ok: false, message: "Хадгалж чадсангүй." };
-  revalidatePath("/app/station");
+  revalidatePath(stationPath(branchId));
   return { ok: true, message: `${round3(liters)} литр хүлээн авснаа бүртгэлээ.` };
 }
 
 // ---------------- Ээлж хаах ----------------
 export async function closeShift(_prev: StationState, f: FormData): Promise<StationState> {
-  const ctx = await requireStation();
+  const ctx = await requireStation(f);
   if ("error" in ctx) return { ok: false, message: ctx.error };
   const { emp, branchId } = ctx;
   const db = createAdminClient();
@@ -217,7 +217,7 @@ export async function closeShift(_prev: StationState, f: FormData): Promise<Stat
     return { ok: false, message: "Энэ ээлж аль хэдийн хаагдсан байна." };
   }
 
-  revalidatePath("/app/station");
+  revalidatePath(stationPath(branchId));
   const diff =
     totals.difference === 0
       ? "Зөрүүгүй."

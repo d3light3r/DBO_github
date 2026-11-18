@@ -8,7 +8,6 @@ const items = [
   { href: "/admin/attendance", label: "Ирцийн бүртгэл", admin: false },
   { href: "/admin/requests", label: "Хүсэлт батлах", admin: false },
   { href: "/admin/reports", label: "Тайлан", admin: false },
-  { href: "/admin/station", label: "⛽ ШТС", admin: false },
   { href: "/admin/employees", label: "Ажилтан", admin: true },
   { href: "/admin/settings", label: "Тохиргоо", admin: true },
 ];

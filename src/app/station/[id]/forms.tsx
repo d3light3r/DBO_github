@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { addReceipt, closeShift, openShift, type StationState } from "./actions";
+import { addReceipt, closeShift, openShift, type StationState } from "./shift-actions";
 import { fmtLiters, fmtMoney, readingSales, round2, shiftTotals } from "@/lib/station-calc";
 
 export type NozzleView = { id: string; name: string; fuelName: string; price: number; tankId: string };
@@ -25,10 +25,12 @@ function NumInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
 
 // ---------------- Ээлж нээх ----------------
 export function OpenShiftForm({
+  stationId,
   nozzles,
   lastEnd,
   handoverExpected,
 }: {
+  stationId: string;
   nozzles: NozzleView[];
   lastEnd: Record<string, number>;
   handoverExpected: number;
@@ -40,6 +42,7 @@ export function OpenShiftForm({
 
   return (
     <form action={action} className="card space-y-4">
+      <input type="hidden" name="station_id" value={stationId} />
       <h2 className="font-semibold">Ээлж нээх</h2>
 
       <div className="space-y-2">
@@ -71,10 +74,11 @@ export function OpenShiftForm({
 }
 
 // ---------------- Түлш хүлээн авах ----------------
-export function ReceiptForm({ tanks }: { tanks: TankView[] }) {
+export function ReceiptForm({ stationId, tanks }: { stationId: string; tanks: TankView[] }) {
   const [state, action, pending] = useActionState(addReceipt, null);
   return (
     <form action={action} className="space-y-2">
+      <input type="hidden" name="station_id" value={stationId} />
       <select name="tank_id" className="input" required defaultValue="">
         <option value="" disabled>Сав сонгох</option>
         {tanks.map((t) => (
@@ -94,10 +98,12 @@ export function ReceiptForm({ tanks }: { tanks: TankView[] }) {
 
 // ---------------- Ээлж хаах ----------------
 export function CloseShiftForm({
+  stationId,
   nozzles,
   starts,
   tanks,
 }: {
+  stationId: string;
   nozzles: NozzleView[];
   starts: Record<string, number>;
   tanks: TankView[];
@@ -130,6 +136,7 @@ export function CloseShiftForm({
 
   return (
     <form action={action} className="card space-y-5">
+      <input type="hidden" name="station_id" value={stationId} />
       <h2 className="font-semibold">Ээлж хаах</h2>
 
       <div className="space-y-2">

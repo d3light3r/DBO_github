@@ -2,6 +2,7 @@ import { getCurrentEmployee } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/types";
 import { signOut } from "../actions";
 import { PasswordForm } from "./password-form";
+import { LocationHelpAuto } from "../location-help";
 
 export default async function ProfilePage() {
   const emp = await getCurrentEmployee();
@@ -16,6 +17,10 @@ export default async function ProfilePage() {
         </dl>
       </section>
       <PasswordForm />
+      <details className="card text-sm">
+        <summary className="cursor-pointer font-semibold">📍 Байршил асаах заавар</summary>
+        <LocationHelpAuto />
+      </details>
       <section className="card text-sm text-gray-600">
         <h2 className="mb-1 font-semibold text-gray-900">Утсандаа суулгах</h2>
         <p><b>iPhone:</b> Safari-гаар нээгээд доод талын &quot;Share&quot; товч → &quot;Add to Home Screen&quot;.</p>

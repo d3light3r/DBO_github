@@ -25,6 +25,7 @@ export type Branch = {
   radius_meters: number;
   allowed_ips: string[];
   is_active: boolean;
+  is_station?: boolean;
 };
 
 export type Schedule = {

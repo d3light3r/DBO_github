@@ -10,7 +10,6 @@ const tabs = [
   { href: "/admin/settings/schedules", label: "Ажлын хуваарь" },
   { href: "/admin/settings/holidays", label: "Баярын өдөр" },
   { href: "/admin/settings/workdays", label: "Ажлын өдөр" },
-  { href: "/admin/settings/station", label: "⛽ ШТС" },
 ];
 
 export function SettingsTabs({ pendingDevices }: { pendingDevices: number }) {
