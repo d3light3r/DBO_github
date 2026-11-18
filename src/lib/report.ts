@@ -7,8 +7,10 @@ import type { AttendanceLog, Employee, Schedule } from "./types";
 
 export type ReportRow = {
   employee: Employee;
+  company: string;
   department: string;
-  branch: string;
+  unit: string; // салбар
+  coordinate: string; // ирц бүртгэх цэг
   scheduledDays: number;
   presentDays: number;
   absentDays: number;
@@ -34,7 +36,7 @@ type Req = { employee_id: string; type: string; start_at: string; end_at: string
 
 export async function buildReport(orgId: string, from: string, to: string): Promise<ReportData> {
   const db = createAdminClient();
-  const [emps, scheds, branches, depts, logs, reqs, { holidays, workDays }] = await Promise.all([
+  const [emps, scheds, branches, depts, logs, reqs, { holidays, workDays }, comps, units] = await Promise.all([
     db.from("employees").select("*").eq("organization_id", orgId).order("full_name"),
     db.from("schedules").select("*").eq("organization_id", orgId),
     db.from("branches").select("id, name").eq("organization_id", orgId),
@@ -43,10 +45,14 @@ export async function buildReport(orgId: string, from: string, to: string): Prom
     db.from("requests").select("employee_id, type, start_at, end_at, total_hours").eq("organization_id", orgId).eq("status", "approved")
       .lte("start_at", `${addDays(to, 1)}T00:00:00+08:00`).gte("end_at", `${from}T00:00:00+08:00`),
     loadCalendar(orgId, from, to),
+    db.from("companies").select("id, name").eq("organization_id", orgId),
+    db.from("units").select("id, name").eq("organization_id", orgId),
   ]);
 
   const schedMap = new Map((scheds.data as Schedule[] ?? []).map((x) => [x.id, x]));
   const branchMap = new Map((branches.data ?? []).map((x) => [x.id, x.name as string]));
+  const companyMap = new Map((comps.data ?? []).map((x) => [x.id, x.name as string]));
+  const unitMap = new Map((units.data ?? []).map((x) => [x.id, x.name as string]));
   const deptMap = new Map((depts.data ?? []).map((x) => [x.id, x.name as string]));
   const allLogs = ((logs.data ?? []) as AttendanceLog[]).filter((l) => l.review_status !== "rejected");
   const requests = (reqs.data ?? []) as Req[];
@@ -85,7 +91,9 @@ export async function buildReport(orgId: string, from: string, to: string): Prom
     rows.push({
       employee: emp,
       department: emp.department_id ? deptMap.get(emp.department_id) ?? "" : "",
-      branch: emp.branch_id ? branchMap.get(emp.branch_id) ?? "" : "",
+      company: emp.company_id ? companyMap.get(emp.company_id) ?? "" : "",
+      unit: emp.unit_id ? unitMap.get(emp.unit_id) ?? "" : "",
+      coordinate: emp.branch_id ? branchMap.get(emp.branch_id) ?? "" : "",
       scheduledDays: scheduled,
       presentDays: presentDates.size,
       absentDays: absent,

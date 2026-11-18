@@ -17,8 +17,10 @@ export async function GET(req: NextRequest) {
   sum.columns = [
     { header: "Код", key: "code", width: 10 },
     { header: "Овог нэр", key: "name", width: 24 },
-    { header: "Хэлтэс", key: "dept", width: 14 },
-    { header: "Салбар", key: "branch", width: 14 },
+    { header: "Компани", key: "company", width: 16 },
+    { header: "Алба хэлтэс", key: "dept", width: 16 },
+    { header: "Салбар", key: "unit", width: 14 },
+    { header: "Координат", key: "coord", width: 14 },
     { header: "Ажлын өдөр", key: "sched", width: 11 },
     { header: "Ирсэн өдөр", key: "present", width: 11 },
     { header: "Тасалсан", key: "absent", width: 10 },
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
   ];
   for (const r of rows) {
     sum.addRow({
-      code: r.employee.emp_code, name: r.employee.full_name, dept: r.department, branch: r.branch,
+      code: r.employee.emp_code, name: r.employee.full_name, company: r.company, dept: r.department, unit: r.unit, coord: r.coordinate,
       sched: r.scheduledDays, present: r.presentDays, absent: r.absentDays, leave: r.leaveDays,
       worked: h(r.workedMinutes), lateN: r.lateCount, lateM: r.lateMinutes, ot: h(r.overtimeMinutes),
       otA: r.approvedOvertimeHours, leaveH: r.leaveHours, trip: r.tripCount, miss: r.missingCheckout,
@@ -45,7 +47,7 @@ export async function GET(req: NextRequest) {
   det.columns = [
     { header: "Огноо", key: "date", width: 12 },
     { header: "Ажилтан", key: "name", width: 24 },
-    { header: "Байршил", key: "branch", width: 16 },
+    { header: "Координат", key: "branch", width: 16 },
     { header: "Арга", key: "method", width: 8 },
     { header: "Ирсэн", key: "in", width: 8 },
     { header: "Явсан", key: "out", width: 8 },

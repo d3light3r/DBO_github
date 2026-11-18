@@ -55,7 +55,7 @@ export default async function EmployeeHome() {
           <dd className="text-right">{sched ? (workToday ? "Тийм" : "Амралт") : "—"}</dd>
           {branch && (
             <>
-              <dt className="text-gray-500">Салбар</dt>
+              <dt className="text-gray-500">📍 Ирц бүртгэх цэг</dt>
               <dd className="text-right">{branch.name}</dd>
             </>
           )}

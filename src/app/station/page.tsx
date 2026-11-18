@@ -6,7 +6,6 @@ import { fmtMoney, round2 } from "@/lib/station-calc";
 import { fmtDateTime, todayUB } from "@/lib/time";
 import type { FuelType, StationShift } from "@/lib/types";
 import { saveFuelType } from "./actions";
-import { StationForm } from "./station-form";
 
 export default async function StationHome() {
   const { emp, isStaffAdmin, isAdmin, stations } = await stationContext();
@@ -19,7 +18,7 @@ export default async function StationHome() {
   const ids = stations.map((x) => x.id);
   const today = todayUB();
   const [{ data: staff }, { data: openSh }, { data: todaySh }, { data: fuels }] = await Promise.all([
-    db.from("employees").select("id, full_name, branch_id").eq("organization_id", emp.organization_id).eq("is_active", true).in("branch_id", ids.length ? ids : [""]),
+    db.from("employees").select("id, full_name, unit_id, branch:branches(name)").eq("organization_id", emp.organization_id).eq("is_active", true).in("unit_id", ids.length ? ids : [""]),
     db.from("station_shifts").select("*").in("branch_id", ids.length ? ids : [""]).eq("status", "open"),
     db.from("station_shifts").select("branch_id, sales_amount").in("branch_id", ids.length ? ids : [""]).eq("status", "closed").gte("closed_at", `${today}T00:00:00+08:00`),
     isAdmin ? db.from("fuel_types").select("*").eq("organization_id", emp.organization_id).order("name") : Promise.resolve({ data: [] }),
@@ -30,12 +29,18 @@ export default async function StationHome() {
     <>
       <section className="card -mt-8">
         <h2 className="font-semibold">Станцууд ({stations.length})</h2>
-        <p className="text-xs text-gray-500">Станц бүрийн ирц бүртгэх байршил, ажилтан, ээлжийн төлөв. Станц дээр дарж ээлж, тайлан, тохиргоо руу орно.</p>
+        <p className="text-xs text-gray-500">Станц бүрийн харьяалал, ажилтан, ээлжийн төлөв. Станц дээр дарж ээлж, тайлан, тохиргоо руу орно.</p>
+        {isAdmin && (
+          <p className="mt-1 text-xs text-gray-500">
+            Шинэ ШТС: <Link href="/admin/settings/structure" className="text-brand underline">Тохиргоо → Компани, бүтэц</Link>-ээс салбар нэмж «⛽ ШТС» гэж
+            тэмдэглэнэ. Ажилтныг <Link href="/admin/employees" className="text-brand underline">Ажилтан</Link> хэсгээс тухайн салбарт оноо.
+          </p>
+        )}
       </section>
 
       <div className="grid gap-3 md:grid-cols-2">
         {stations.map((st) => {
-          const myStaff = (staff ?? []).filter((e) => e.branch_id === st.id);
+          const myStaff = ((staff ?? []) as unknown as { id: string; full_name: string; unit_id: string; branch: { name: string } | null }[]).filter((e) => e.unit_id === st.id);
           const open = ((openSh ?? []) as StationShift[]).find((x) => x.branch_id === st.id);
           const sales = round2((todaySh ?? []).filter((x) => x.branch_id === st.id).reduce((a, x) => a + Number(x.sales_amount ?? 0), 0));
           return (
@@ -49,10 +54,20 @@ export default async function StationHome() {
                 )}
               </div>
               <dl className="grid grid-cols-[6.5rem_1fr] gap-y-1 text-sm">
-                <dt className="text-gray-500">📍 Байршил</dt>
-                <dd>{Number(st.latitude).toFixed(5)}, {Number(st.longitude).toFixed(5)} <span className="text-gray-400">· {st.radius_meters}м</span></dd>
-                <dt className="text-gray-500">👥 Ажилтан</dt>
-                <dd>{myStaff.length ? myStaff.map((e) => e.full_name).join(", ") : <span className="text-gray-400">Оноогоогүй</span>}</dd>
+                <dt className="text-gray-500">🏢 Харьяалал</dt>
+                <dd>{st.company_name} · {st.department_name}</dd>
+                <dt className="text-gray-500">👥 Ажилтан ({myStaff.length})</dt>
+                <dd>
+                  {myStaff.length ? (
+                    myStaff.map((e) => (
+                      <span key={e.id} className="block">
+                        {e.full_name} <span className="text-xs text-gray-400">📍 {e.branch?.name ?? "координатгүй"}</span>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-400">Оноогоогүй</span>
+                  )}
+                </dd>
                 {open && (
                   <>
                     <dt className="text-gray-500">🕒 Ээлж</dt>
@@ -65,12 +80,11 @@ export default async function StationHome() {
             </Link>
           );
         })}
-        {stations.length === 0 && <p className="card text-sm text-gray-500">ШТС нэмээгүй байна. Доорх маягтаар нэмнэ үү.</p>}
+        {stations.length === 0 && <p className="card text-sm text-gray-500">ШТС салбар алга.</p>}
       </div>
 
       {isAdmin && (
         <div className="grid gap-4 md:grid-cols-2">
-          <StationForm />
           <section className="card h-fit space-y-2">
             <h2 className="font-semibold">Шатахууны төрөл, үнэ</h2>
             <p className="text-xs text-gray-500">Бүх станцад нийтлэг. Ээлж хаах үеийн үнээр борлуулалт тооцогдоно.</p>

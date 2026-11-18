@@ -4,24 +4,42 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Branch } from "@/lib/types";
 import { ConfirmButton } from "@/components/confirm-button";
 import { deleteBranch } from "../../actions";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/modal";
 import { BranchForm } from "./branch-form";
 
 export default async function BranchesPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const me = await requireAdmin();
   const { edit } = await searchParams;
-  const { data } = await createAdminClient().from("branches").select("*").eq("organization_id", me.organization_id).eq("is_station", false).order("name");
+  const db = createAdminClient();
+  const [{ data }, { data: emps }] = await Promise.all([
+    db.from("branches").select("*").eq("organization_id", me.organization_id).order("name"),
+    db.from("employees").select("branch_id").eq("organization_id", me.organization_id).eq("is_active", true),
+  ]);
+  const count = (id: string) => (emps ?? []).filter((e) => e.branch_id === id).length;
   const branches = (data ?? []) as Branch[];
   const editing = branches.find((b) => b.id === edit);
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-gray-500">
-        ШТС-үүдийг (байршил, ажилтан, сав, хошуу) <Link href="/station" className="text-brand underline">⛽ ШТС апп</Link>-аас удирдана.
+        <b>Координат</b> = ажилтан «Ирлээ» дарах цэг (газрын зургийн байршил + радиус). Ажилтан бүрт координатыг{" "}
+        <Link href="/admin/employees" className="text-brand underline">Ажилтан</Link> хэсгээс сонгоно. ШТС-ийн байршлыг ч энд нэмнэ (жнь «ШТС-1 байршил»).
       </p>
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <div className="flex justify-end">
+        <Modal label={<><Icon name="plus" /> Координат нэмэх</>} title="Шинэ координат">
+          <BranchForm key="new" />
+        </Modal>
+        {editing && (
+            <Modal label="" title={`Координат засах: ${editing.name}`} defaultOpen closeHref="?" buttonClassName="hidden">
+              <BranchForm key={editing.id} branch={editing} />
+            </Modal>
+        )}
+      </div>
+      <div>
         <div className="card overflow-x-auto p-0">
           <table className="table">
-            <thead><tr><th>Нэр</th><th>Байршил</th><th>Радиус</th><th>Wi-Fi IP</th><th></th></tr></thead>
+            <thead><tr><th>Нэр</th><th>Байршил</th><th>Радиус</th><th>Wi-Fi IP</th><th>Ажилтан</th><th></th></tr></thead>
             <tbody>
               {branches.map((b) => (
                 <tr key={b.id} className={b.is_active ? "" : "opacity-50"}>
@@ -34,22 +52,22 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
                   </td>
                   <td>{b.radius_meters}м</td>
                   <td className="text-xs">{b.allowed_ips.length ? b.allowed_ips.join(", ") : <span className="text-gray-400">Зөвхөн GPS</span>}</td>
+                  <td className="whitespace-nowrap">👥 {count(b.id)}</td>
                   <td>
                     <div className="flex items-center gap-3">
                       <a href={`?edit=${b.id}`} className="text-sm text-brand">Засах</a>
                       <form action={deleteBranch}>
                         <input type="hidden" name="id" value={b.id} />
-                        <ConfirmButton message={`«${b.name}» салбарыг устгах уу? Энэ салбарт оноогдсон ажилтнуудын салбар хоосон болно.`}>Устгах</ConfirmButton>
+                        <ConfirmButton message={`«${b.name}» координатыг устгах уу? Энэ координаттай ажилтнуудын координат хоосон болно.`}>Устгах</ConfirmButton>
                       </form>
                     </div>
                   </td>
                 </tr>
               ))}
-              {branches.length === 0 && <tr><td colSpan={5} className="py-6 text-center text-gray-400">Салбар нэмээгүй байна</td></tr>}
+              {branches.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-gray-400">Координат нэмээгүй байна</td></tr>}
             </tbody>
           </table>
         </div>
-        <BranchForm key={editing?.id ?? "new"} branch={editing} />
       </div>
     </div>
   );

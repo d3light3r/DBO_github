@@ -43,10 +43,10 @@ export type DeviceState =
   | { kind: "unregistered" };
 
 /** Энэ утас тухайн ажилтанд бүртгэлтэй, батлагдсан эсэх */
-export async function deviceState(emp: Pick<Employee, "id" | "organization_id">): Promise<DeviceState> {
+export async function deviceState(emp: Pick<Employee, "id" | "require_device">): Promise<DeviceState> {
+  // Утас шаардах эсэхийг ажилтан бүр дээр тохируулна
+  if (!emp.require_device) return { kind: "not_required" };
   const db = createAdminClient();
-  const { data: org } = await db.from("organizations").select("require_device").eq("id", emp.organization_id).maybeSingle();
-  if (!org?.require_device) return { kind: "not_required" };
   const hash = await deviceTokenHash();
   if (!hash) return { kind: "unregistered" };
   const { data } = await db.from("devices").select("*").eq("token_hash", hash).maybeSingle();

@@ -36,8 +36,8 @@ export function BranchForm({ branch }: { branch?: Branch }) {
   }
 
   return (
-    <form action={action} className="card h-fit space-y-3">
-      <h2 className="font-semibold">{branch ? "Салбар засах" : "Шинэ салбар"}</h2>
+    <form action={action} className="space-y-3">
+      <h2 className="font-semibold">{branch ? "Координат засах" : "Шинэ координат"}</h2>
       {branch && <input type="hidden" name="id" value={branch.id} />}
       <div><label className="label">Нэр</label><input name="name" className="input" defaultValue={branch?.name} placeholder="Төв оффис, ШТС-1..." required /></div>
       <div className="grid grid-cols-2 gap-2">
@@ -53,7 +53,7 @@ export function BranchForm({ branch }: { branch?: Branch }) {
       <div>
         <label className="label">Wi-Fi public IP (заавал биш, таслалаар)</label>
         <input name="allowed_ips" className="input" defaultValue={branch?.allowed_ips.join(", ")} placeholder="202.131.x.x" />
-        <p className="mt-1 text-xs text-gray-500">Салбарын Wi-Fi-д холбогдоод whatismyip.com-оос харна. Хоосон бол зөвхөн GPS-ээр шалгана.</p>
+        <p className="mt-1 text-xs text-gray-500">Тухайн газрын Wi-Fi-д холбогдоод whatismyip.com-оос харна. Хоосон бол зөвхөн GPS-ээр шалгана.</p>
       </div>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" defaultChecked={branch?.is_active ?? true} className="accent-brand" /> Идэвхтэй</label>
       <FormMessage state={state} />

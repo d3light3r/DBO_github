@@ -2,31 +2,52 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon, type IconName } from "@/components/icons";
 
-const items = [
-  { href: "/admin", label: "Статистик", admin: false },
-  { href: "/admin/attendance", label: "Ирцийн бүртгэл", admin: false },
-  { href: "/admin/requests", label: "Хүсэлт батлах", admin: false },
-  { href: "/admin/reports", label: "Тайлан", admin: false },
-  { href: "/admin/employees", label: "Ажилтан", admin: true },
-  { href: "/admin/settings", label: "Тохиргоо", admin: true },
+type Item = { href: string; label: string; icon: IconName; admin: boolean; badge?: "requests" | "devices" };
+
+const items: Item[] = [
+  { href: "/admin", label: "Нүүр хуудас", icon: "home", admin: false },
+  { href: "/admin/attendance", label: "Ирцийн бүртгэл", icon: "clock", admin: false },
+  { href: "/admin/requests", label: "Цагийн хүсэлт", icon: "send", admin: false, badge: "requests" },
+  { href: "/admin/reports", label: "Тайлан", icon: "report", admin: false },
+  { href: "/admin/employees", label: "Ажилтан", icon: "users", admin: true },
+  { href: "/admin/settings/structure", label: "Алба хэлтэс", icon: "tree", admin: true },
+  { href: "/admin/settings/schedules", label: "Хуваарь", icon: "calendar", admin: true },
+  { href: "/admin/settings/branches", label: "Байршил", icon: "pin", admin: true },
+  { href: "/admin/settings/devices", label: "Утас бүртгэл", icon: "phone", admin: true, badge: "devices" },
+  { href: "/admin/settings", label: "Тохиргоо", icon: "settings", admin: true },
 ];
 
-export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
+// Дээрх цэсэнд тусдаа байгаа тохиргооны дэд хуудсууд "Тохиргоо"-г идэвхжүүлэхгүй
+const OWN = ["/admin/settings/structure", "/admin/settings/schedules", "/admin/settings/branches", "/admin/settings/devices"];
+
+export function AdminNav({ isAdmin, counts }: { isAdmin: boolean; counts: { requests: number; devices: number } }) {
   const path = usePathname();
+  const isActive = (href: string) => {
+    if (href === "/admin") return path === "/admin";
+    if (href === "/admin/settings") return path.startsWith(href) && !OWN.some((o) => path.startsWith(o));
+    return path.startsWith(href);
+  };
   return (
-    <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:px-2">
+    <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:flex-col md:px-3">
       {items
         .filter((i) => isAdmin || !i.admin)
         .map((i) => {
-          const active = i.href === "/admin" ? path === "/admin" : path.startsWith(i.href);
+          const active = isActive(i.href);
+          const n = i.badge ? counts[i.badge] : 0;
           return (
             <Link
               key={i.href}
               href={i.href}
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm ${active ? "bg-brand text-white" : "hover:bg-gray-800"}`}
+              className={`relative flex items-center gap-3 whitespace-nowrap rounded-xl px-3 py-2 text-sm transition ${
+                active ? "bg-white/10 font-semibold text-white" : "text-gray-300 hover:bg-white/5 hover:text-white"
+              }`}
             >
-              {i.label}
+              {active && <span className="absolute inset-y-2 left-0 hidden w-1 rounded-full bg-brand md:block" />}
+              <Icon name={i.icon} className="h-[18px] w-[18px] shrink-0" />
+              <span className="flex-1">{i.label}</span>
+              {n > 0 && <span className="rounded-full bg-brand px-1.5 text-xs font-semibold text-white">{n}</span>}
             </Link>
           );
         })}

@@ -1,14 +1,22 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export type Options = Awaited<ReturnType<typeof loadOptions>>;
+
 export async function loadOptions(orgId: string) {
   const db = createAdminClient();
-  const [d, b, s] = await Promise.all([
-    db.from("departments").select("id, name").eq("organization_id", orgId).order("name"),
-    db.from("branches").select("id, name, is_station").eq("organization_id", orgId).order("is_station").order("name"),
+  const [c, d, u, b, s] = await Promise.all([
+    db.from("companies").select("id, name").eq("organization_id", orgId).order("created_at"),
+    db.from("departments").select("id, name, company_id").eq("organization_id", orgId).order("name"),
+    db.from("units").select("id, name, department_id, is_station, is_active").eq("organization_id", orgId).order("name"),
+    db.from("branches").select("id, name").eq("organization_id", orgId).order("name"),
     db.from("schedules").select("id, name, kind").eq("organization_id", orgId).order("name"),
   ]);
-  // Станцыг ⛽ тэмдгээр ялгана
-  const branches = (b.data ?? []).map((x) => ({ id: x.id as string, name: x.is_station ? `⛽ ${x.name}` : (x.name as string) }));
-  return { departments: d.data ?? [], branches, schedules: s.data ?? [] };
+  return {
+    companies: (c.data ?? []) as { id: string; name: string }[],
+    departments: (d.data ?? []) as { id: string; name: string; company_id: string | null }[],
+    units: (u.data ?? []) as { id: string; name: string; department_id: string; is_station: boolean; is_active: boolean }[],
+    branches: (b.data ?? []) as { id: string; name: string }[], // координат
+    schedules: (s.data ?? []) as { id: string; name: string; kind?: string }[],
+  };
 }

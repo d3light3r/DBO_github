@@ -1,5 +1,7 @@
 import { fmtDate, todayUB } from "@/lib/time";
 import { ConfirmButton } from "@/components/confirm-button";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/modal";
 
 type Item = { id: string; date: string; name: string };
 
@@ -39,15 +41,19 @@ export function CalendarList({
 
   return (
     <section className="card max-w-2xl space-y-4">
-      <div>
-        <h2 className="font-semibold">{title}</h2>
-        <p className="text-xs text-gray-500">{description}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex-1">
+          <h2 className="font-semibold">{title}</h2>
+          <p className="text-xs text-gray-500">{description}</p>
+        </div>
+        <Modal label={<><Icon name="plus" /> Нэмэх</>} title={title} closeOnSubmit>
+          <form action={addAction} className="space-y-3">
+            <div><label className="label">Огноо</label><input type="date" name="date" className="input" required /></div>
+            <div><label className="label">Нэр</label><input name="name" className="input" placeholder={placeholder} required /></div>
+            <button className="btn-primary w-full">Нэмэх</button>
+          </form>
+        </Modal>
       </div>
-      <form action={addAction} className="flex flex-wrap gap-2">
-        <input type="date" name="date" className="input w-auto" required />
-        <input name="name" className="input w-auto flex-1" placeholder={placeholder} required />
-        <button className="btn-primary">Нэмэх</button>
-      </form>
       {upcoming.length > 0 ? list(upcoming) : <p className="text-sm text-gray-400">Удахгүй болох өдөр алга</p>}
       {past.length > 0 && (
         <details>

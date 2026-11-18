@@ -8,9 +8,12 @@ export type Employee = {
   full_name: string;
   phone: string;
   role: Role;
-  department_id: string | null;
-  branch_id: string | null;
+  company_id: string | null;
+  department_id: string | null; // алба хэлтэс
+  unit_id: string | null; // салбар (ШТС байж болно)
+  branch_id: string | null; // координат (ирц бүртгэх цэг)
   schedule_id: string | null;
+  require_device: boolean; // зөвхөн бүртгэлтэй утаснаас цаг бүртгүүлэх
   cycle_anchor_date: string | null;
   allow_trip: boolean;
   is_active: boolean;
@@ -25,8 +28,12 @@ export type Branch = {
   radius_meters: number;
   allowed_ips: string[];
   is_active: boolean;
-  is_station?: boolean;
 };
+
+export type Company = { id: string; organization_id: string; name: string };
+export type Department = { id: string; organization_id: string; company_id: string | null; name: string };
+/** Салбар (байгууллагын нэгж). is_station = ШТС */
+export type Unit = { id: string; organization_id: string; department_id: string; name: string; is_station: boolean; is_active: boolean };
 
 export type Schedule = {
   id: string;

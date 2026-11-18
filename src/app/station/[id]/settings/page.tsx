@@ -2,73 +2,47 @@ import { notFound } from "next/navigation";
 import { requireStationPage } from "@/lib/station-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { FuelType, Nozzle, Tank } from "@/lib/types";
-import { ConfirmButton } from "@/components/confirm-button";
-import { assignStaff, saveNozzle, saveTank, unassignStaff } from "../../actions";
-import { StationForm } from "../../station-form";
+import Link from "next/link";
+import { saveNozzle, saveTank } from "../../actions";
 
 const row = "grid items-center gap-2 border-b border-gray-100 py-2 last:border-0";
 
 export default async function StationSettingsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { emp, station, isAdmin } = await requireStationPage(id);
+  const { emp, isAdmin } = await requireStationPage(id);
   if (!isAdmin) notFound();
   const db = createAdminClient();
   const org = emp.organization_id;
-  const [{ data: fu }, { data: tk }, { data: nz }, { data: emps }, { data: branches }] = await Promise.all([
+  const [{ data: fu }, { data: tk }, { data: nz }, { data: emps }] = await Promise.all([
     db.from("fuel_types").select("*").eq("organization_id", org).order("name"),
     db.from("station_tanks").select("*").eq("branch_id", id).order("name"),
     db.from("station_nozzles").select("*").eq("branch_id", id).order("name"),
-    db.from("employees").select("id, full_name, emp_code, branch_id").eq("organization_id", org).eq("is_active", true).order("full_name"),
-    db.from("branches").select("id, name").eq("organization_id", org),
+    db.from("employees").select("id, full_name, emp_code, branch:branches(name)").eq("organization_id", org).eq("unit_id", id).eq("is_active", true).order("full_name"),
   ]);
   const fuels = (fu ?? []) as FuelType[];
   const tanks = (tk ?? []) as Tank[];
   const nozzles = (nz ?? []) as Nozzle[];
   const fuelName = (fid: string) => fuels.find((f) => f.id === fid)?.name ?? "";
-  const branchName = new Map((branches ?? []).map((b) => [b.id, b.name as string]));
-  const staff = (emps ?? []).filter((e) => e.branch_id === id);
-  const others = (emps ?? []).filter((e) => e.branch_id !== id);
+  const staff = (emps ?? []) as unknown as { id: string; full_name: string; emp_code: string; branch: { name: string } | null }[];
 
   return (
     <div className="space-y-4">
-      <StationForm
-        station={{
-          id: station.id,
-          name: station.name,
-          latitude: Number(station.latitude),
-          longitude: Number(station.longitude),
-          radius_meters: station.radius_meters,
-          is_active: station.is_active,
-        }}
-      />
-
-      {/* ---- Ажилтан ---- */}
+      {/* ---- Ажилтан (Ажилтан хэсгээс салбар сонгож ононо) ---- */}
       <section className="card space-y-2">
-        <h2 className="font-semibold">👥 Энэ станцын ажилтан ({staff.length})</h2>
+        <h2 className="font-semibold">👥 Энэ ШТС-ийн ажилтан ({staff.length})</h2>
+        <ul className="divide-y divide-gray-100 text-sm">
+          {staff.map((e) => (
+            <li key={e.id} className="flex justify-between py-1.5">
+              <span>{e.full_name} <span className="text-xs text-gray-400">· {e.emp_code}</span></span>
+              <span className="text-xs text-gray-500">📍 {e.branch?.name ?? "координатгүй"}</span>
+            </li>
+          ))}
+          {staff.length === 0 && <li className="py-1.5 text-gray-400">Ажилтан оноогоогүй байна.</li>}
+        </ul>
         <p className="text-xs text-gray-500">
-          Энд оноосон ажилтан энэ станцын байршилд ирц бүртгүүлж, ШТС апп-д энэ станцын ээлж нээж/хаана. Ажилтан нэг л салбар/станцтай байна.
+          Ажилтныг <Link href="/admin/employees" className="text-brand underline">Удирдлага → Ажилтан</Link> хэсгээс засаж «Салбар»-т энэ ШТС-ийг сонгоно.
+          📍 Координат нь ажилтан «Ирлээ» дарах цэг.
         </p>
-        {staff.map((e) => (
-          <form key={e.id} action={unassignStaff} className={`${row} grid-cols-[1fr_auto]`}>
-            <input type="hidden" name="station_id" value={id} />
-            <input type="hidden" name="employee_id" value={e.id} />
-            <span className="text-sm">{e.full_name} <span className="text-xs text-gray-400">· {e.emp_code}</span></span>
-            <ConfirmButton message={`${e.full_name}-ийг энэ станцаас хасах уу? Салбаргүй болно.`}>Хасах</ConfirmButton>
-          </form>
-        ))}
-        {staff.length === 0 && <p className="text-sm text-gray-400">Ажилтан оноогоогүй байна.</p>}
-        <form action={assignStaff} className="grid grid-cols-[1fr_auto] gap-2 pt-2">
-          <input type="hidden" name="station_id" value={id} />
-          <select name="employee_id" className="input" required defaultValue="">
-            <option value="" disabled>Ажилтан сонгох</option>
-            {others.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.full_name}{e.branch_id ? ` (одоо: ${branchName.get(e.branch_id) ?? "—"})` : ""}
-              </option>
-            ))}
-          </select>
-          <button className="btn-primary">Оноох</button>
-        </form>
       </section>
 
       {/* ---- Сав ---- */}

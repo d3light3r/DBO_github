@@ -14,7 +14,7 @@ const n = (f: FormData, k: string) => {
   return v === "" ? null : Number(v);
 };
 
-// ---------------- Салбар ----------------
+// ---------------- Координат (ирц бүртгэх цэг) ----------------
 export async function saveBranch(_p: FormState, f: FormData): Promise<FormState> {
   const me = await requireAdmin();
   const lat = n(f, "latitude");
@@ -72,30 +72,72 @@ export async function saveSchedule(_p: FormState, f: FormData): Promise<FormStat
   return { ok: true, message: "Хадгаллаа." };
 }
 
-// ---------------- Хэлтэс ----------------
-export async function addDepartment(f: FormData) {
+// ---------------- Бүтэц: Компани → Алба хэлтэс → Салбар ----------------
+const STRUCTURE = "/admin/settings/structure";
+const isFk = (code?: string) => code === "23503";
+
+export async function saveCompany(f: FormData) {
   const me = await requireAdmin();
   const name = s(f, "name");
-  if (name) await createAdminClient().from("departments").insert({ organization_id: me.organization_id, name });
-  revalidatePath("/admin/settings/departments");
+  if (!name) return;
+  const db = createAdminClient();
+  const id = s(f, "id");
+  if (id) await db.from("companies").update({ name }).eq("id", id).eq("organization_id", me.organization_id);
+  else await db.from("companies").insert({ organization_id: me.organization_id, name });
+  revalidatePath(STRUCTURE);
 }
 
-export async function renameDepartment(f: FormData) {
+export async function deleteCompany(f: FormData) {
+  const me = await requireAdmin();
+  // Алба хэлтэстэй бол FK (restrict) хориглоно
+  await createAdminClient().from("companies").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath(STRUCTURE);
+}
+
+export async function saveDepartment(f: FormData) {
   const me = await requireAdmin();
   const name = s(f, "name");
-  if (name) await createAdminClient().from("departments").update({ name }).eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/departments");
+  const companyId = s(f, "company_id");
+  if (!name || !companyId) return;
+  const db = createAdminClient();
+  const { data: c } = await db.from("companies").select("id").eq("id", companyId).eq("organization_id", me.organization_id).maybeSingle();
+  if (!c) return;
+  const id = s(f, "id");
+  if (id) await db.from("departments").update({ name }).eq("id", id).eq("organization_id", me.organization_id);
+  else await db.from("departments").insert({ organization_id: me.organization_id, company_id: companyId, name });
+  revalidatePath(STRUCTURE);
 }
 
 export async function deleteDepartment(f: FormData) {
   const me = await requireAdmin();
-  // Ажилтнуудын хэлтэс хоосон болно (on delete set null)
-  await createAdminClient().from("departments").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/departments");
-  revalidatePath("/admin/employees");
+  const { error } = await createAdminClient().from("departments").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  if (error && !isFk(error.code)) console.error(error);
+  revalidatePath(STRUCTURE);
 }
 
-// ---------------- Салбар, хуваарь устгах ----------------
+export async function saveUnit(f: FormData) {
+  const me = await requireAdmin();
+  const name = s(f, "name");
+  const deptId = s(f, "department_id");
+  if (!name || !deptId) return;
+  const db = createAdminClient();
+  const { data: d } = await db.from("departments").select("id").eq("id", deptId).eq("organization_id", me.organization_id).maybeSingle();
+  if (!d) return;
+  const id = s(f, "id");
+  const row = { name, is_station: f.get("is_station") === "on" };
+  if (id) await db.from("units").update({ ...row, is_active: f.get("is_active") === "on" }).eq("id", id).eq("organization_id", me.organization_id);
+  else await db.from("units").insert({ ...row, organization_id: me.organization_id, department_id: deptId });
+  revalidatePath(STRUCTURE);
+}
+
+export async function deleteUnit(f: FormData) {
+  const me = await requireAdmin();
+  // ШТС-ийн түүхтэй бол FK (restrict) хориглоно
+  await createAdminClient().from("units").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
+  revalidatePath(STRUCTURE);
+}
+
+// ---------------- Координат, хуваарь устгах ----------------
 export async function deleteBranch(f: FormData) {
   const me = await requireAdmin();
   await createAdminClient().from("branches").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
@@ -143,24 +185,40 @@ export async function saveEmployee(_p: FormState, f: FormData): Promise<FormStat
     full_name: s(f, "full_name"),
     phone,
     role,
+    company_id: s(f, "company_id") || null,
     department_id: s(f, "department_id") || null,
+    unit_id: s(f, "unit_id") || null,
     branch_id: s(f, "branch_id") || null,
+    require_device: f.get("require_device") === "on",
     schedule_id: s(f, "schedule_id") || null,
     cycle_anchor_date: s(f, "cycle_anchor_date") || null,
     allow_trip: f.get("allow_trip") === "on",
     is_active: id ? f.get("is_active") === "on" : true,
   };
 
-  // Хэлтэс, салбар, хуваарь нь заавал өөрийн байгууллагынх байх ёстой
+  // Компани, хэлтэс, салбар, координат, хуваарь нь заавал өөрийн байгууллагынх байх ёстой
   const refs = [
-    ["departments", row.department_id],
+    ["companies", row.company_id],
     ["branches", row.branch_id],
     ["schedules", row.schedule_id],
   ] as const;
   for (const [table, refId] of refs) {
     if (!refId) continue;
     const { data: ok } = await db.from(table).select("id").eq("id", refId).eq("organization_id", me.organization_id).maybeSingle();
-    if (!ok) return { ok: false, message: "Сонгосон хэлтэс, салбар эсвэл хуваарь буруу байна." };
+    if (!ok) return { ok: false, message: "Сонгосон компани, координат эсвэл хуваарь буруу байна." };
+  }
+  // Бүтэц уялдаатай байх ёстой: салбар → тухайн хэлтэст, хэлтэс → тухайн компанид
+  if (row.department_id) {
+    const { data: d } = await db.from("departments").select("company_id").eq("id", row.department_id).eq("organization_id", me.organization_id).maybeSingle();
+    if (!d) return { ok: false, message: "Алба хэлтэс олдсонгүй." };
+    if (row.company_id && d.company_id !== row.company_id) return { ok: false, message: "Алба хэлтэс нь сонгосон компанийнх биш байна." };
+    row.company_id = row.company_id ?? d.company_id;
+  }
+  if (row.unit_id) {
+    const { data: u } = await db.from("units").select("department_id").eq("id", row.unit_id).eq("organization_id", me.organization_id).maybeSingle();
+    if (!u) return { ok: false, message: "Салбар олдсонгүй." };
+    if (row.department_id && u.department_id !== row.department_id) return { ok: false, message: "Салбар нь сонгосон алба хэлтсийнх биш байна." };
+    row.department_id = row.department_id ?? u.department_id;
   }
 
   if (password && password.length < 8) return { ok: false, message: "Нууц үг хамгийн багадаа 8 тэмдэгт." };
@@ -273,11 +331,19 @@ export async function removeDevice(f: FormData) {
   revalidatePath("/admin/settings/devices");
 }
 
-export async function setRequireDevice(f: FormData) {
+/** Ажилтан бүрийн "зөвхөн бүртгэлтэй утаснаас" тохиргоо */
+export async function setEmployeeRequireDevice(f: FormData) {
   const me = await requireAdmin();
   await createAdminClient()
-    .from("organizations")
-    .update({ require_device: f.get("require_device") === "on" })
-    .eq("id", me.organization_id);
+    .from("employees")
+    .update({ require_device: s(f, "value") === "on" })
+    .eq("id", s(f, "employee_id"))
+    .eq("organization_id", me.organization_id);
+  revalidatePath("/admin/settings/devices");
+}
+
+export async function setAllRequireDevice(f: FormData) {
+  const me = await requireAdmin();
+  await createAdminClient().from("employees").update({ require_device: s(f, "value") === "on" }).eq("organization_id", me.organization_id);
   revalidatePath("/admin/settings/devices");
 }

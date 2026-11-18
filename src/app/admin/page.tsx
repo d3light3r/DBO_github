@@ -33,7 +33,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Promis
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Статистик</h1>
+          <h1 className="text-2xl font-bold">Хянах самбар</h1>
           <div className="flex rounded-xl bg-gray-200/70 p-1">
             {tab("today", "Өнөөдөр", "/admin")}
             {tab("month", "Сараар", `/admin?view=month&month=${month}`)}

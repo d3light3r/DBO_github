@@ -13,11 +13,8 @@ export default async function StationLayout({ children, params }: { children: Re
           <div>
             <h2 className="text-xl font-bold">⛽ {station.name}</h2>
             <p className="text-xs text-gray-500">
-              📍 Ирц бүртгэх байршил:{" "}
-              <a className="text-brand underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${station.latitude},${station.longitude}`}>
-                газрын зураг
-              </a>{" "}
-              · {station.radius_meters}м радиус
+              🏢 {station.company_name} · {station.department_name}
+              {!station.is_active && <span className="ml-1 text-brand">(идэвхгүй)</span>}
             </p>
           </div>
           {isStaffAdmin && stations.length > 1 && (

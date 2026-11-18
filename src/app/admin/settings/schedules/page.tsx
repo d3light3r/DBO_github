@@ -4,6 +4,8 @@ import { WEEKDAY_SHORT } from "@/lib/time";
 import type { Schedule } from "@/lib/types";
 import { ConfirmButton } from "@/components/confirm-button";
 import { deleteSchedule } from "../../actions";
+import { Icon } from "@/components/icons";
+import { Modal } from "@/components/modal";
 import { ScheduleForm } from "./schedule-form";
 
 export default async function SchedulesPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
@@ -19,7 +21,17 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   const count = (id: string) => (emps ?? []).filter((e) => e.schedule_id === id).length;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Modal label={<><Icon name="plus" /> Хуваарь нэмэх</>} title="Шинэ хуваарь">
+          <ScheduleForm key="new" />
+        </Modal>
+        {editing && (
+            <Modal label="" title={`Хуваарь засах: ${editing.name}`} defaultOpen closeHref="?" buttonClassName="hidden">
+              <ScheduleForm key={editing.id} schedule={editing} />
+            </Modal>
+        )}
+      </div>
       <div className="card overflow-x-auto p-0">
         <table className="table">
           <thead><tr><th>Нэр</th><th>Төрөл</th><th>Цаг</th><th>Хоцролт тооцох</th><th>Ажилтан</th><th></th></tr></thead>
@@ -50,7 +62,6 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
           </tbody>
         </table>
       </div>
-      <ScheduleForm key={editing?.id ?? "new"} schedule={editing} />
     </div>
   );
 }

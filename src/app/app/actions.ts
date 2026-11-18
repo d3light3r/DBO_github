@@ -100,10 +100,10 @@ export async function punch(_prev: PunchState, form: FormData): Promise<PunchSta
     method = "TRIP";
   } else {
     const all = (branches ?? []) as Branch[];
-    // Салбар оноогдсон ажилтан зөвхөн өөрийн салбартаа бүртгүүлнэ. Оноогоогүй бол аль ч салбарт.
+    // Координат оноогдсон ажилтан зөвхөн өөрийн координатад бүртгүүлнэ. Оноогоогүй бол аль ч салбарт.
     const list = emp.branch_id ? all.filter((b) => b.id === emp.branch_id) : all;
     if (emp.branch_id && list.length === 0)
-      return { ok: false, message: "Таны салбар идэвхгүй байна. Админд хандана уу." };
+      return { ok: false, message: "Таны ирц бүртгэх координат идэвхгүй байна. Админд хандана уу." };
     const wifiBranch = ip ? list.find((b) => b.allowed_ips?.includes(ip)) : undefined;
     if (wifiBranch) {
       method = "WIFI";

@@ -13,7 +13,7 @@ export function ScheduleForm({ schedule }: { schedule?: Schedule }) {
   const days = schedule?.work_weekdays ?? [1, 2, 3, 4, 5];
 
   return (
-    <form action={action} className="card h-fit space-y-3">
+    <form action={action} className="space-y-3">
       <h2 className="font-semibold">{schedule ? "Хуваарь засах" : "Шинэ хуваарь"}</h2>
       {schedule && <input type="hidden" name="id" value={schedule.id} />}
       <div><label className="label">Нэр</label><input name="name" className="input" defaultValue={schedule?.name} placeholder="Оффис 09-18" required /></div>
