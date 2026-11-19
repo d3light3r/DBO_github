@@ -34,8 +34,8 @@ export function RequestForm() {
         </div>
       </div>
       <div>
-        <label className="label">Шалтгаан</label>
-        <textarea name="reason" rows={2} className="input" required />
+        <label className="label">Тайлбар</label>
+        <textarea name="reason" rows={2} className="input" placeholder="Юуны тулд, ямар ажил..." required />
       </div>
       {state && (
         <p className={`rounded-lg px-3 py-2 text-sm ${state.ok ? "bg-emerald-50 text-emerald-700" : "bg-brand-soft text-brand"}`}>{state.message}</p>

@@ -3,19 +3,41 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtDateTime } from "@/lib/time";
 import { REQUEST_LABELS, STATUS_LABELS, type RequestType } from "@/lib/types";
 import { RequestForm } from "./request-form";
+import { approverNameFor, reviewableEmployeeIds } from "@/lib/approvals";
+import { RequestCard, type RequestRow } from "@/components/request-card";
 
 export default async function RequestsPage() {
   const emp = await getCurrentEmployee();
-  const { data } = await createAdminClient()
-    .from("requests")
-    .select("*")
-    .eq("employee_id", emp.id)
-    .order("created_at", { ascending: false })
-    .limit(30);
+  const db = createAdminClient();
+  const [{ data }, approver, allowed] = await Promise.all([
+    db.from("requests").select("*").eq("employee_id", emp.id).order("created_at", { ascending: false }).limit(30),
+    approverNameFor(emp),
+    // Админ удирдлагын хэсгээс батална; энд зөвхөн алба хэлтсийн батлагчид харагдана
+    emp.role === "admin" ? Promise.resolve([] as string[]) : reviewableEmployeeIds(emp),
+  ]);
+  const ids = allowed ?? [];
+  const { data: toReview } = ids.length
+    ? await db
+        .from("requests")
+        .select("*, employee:employees!requests_employee_id_fkey(full_name, emp_code)")
+        .in("employee_id", ids)
+        .eq("status", "pending")
+        .order("created_at")
+    : { data: [] };
+  const reviewRows = (toReview ?? []) as RequestRow[];
 
   return (
     <>
+      {reviewRows.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-sm font-semibold">✅ Батлах хүсэлт ({reviewRows.length})</h2>
+          {reviewRows.map((r) => <RequestCard key={r.id} r={r} compact />)}
+        </section>
+      )}
       <RequestForm />
+      <p className="-mt-2 px-1 text-xs text-gray-500">
+        Таны хүсэлтийг батлах: <b>{approver ?? "Админ"}</b>
+      </p>
       <section className="card">
         <h2 className="mb-2 text-sm font-semibold">Миний хүсэлтүүд</h2>
         {(data ?? []).length === 0 ? (

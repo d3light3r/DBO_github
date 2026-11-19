@@ -102,9 +102,15 @@ export async function saveDepartment(f: FormData) {
   const db = createAdminClient();
   const { data: c } = await db.from("companies").select("id").eq("id", companyId).eq("organization_id", me.organization_id).maybeSingle();
   if (!c) return;
+  // Хүсэлт батлагч: энэ байгууллагын идэвхтэй ажилтан байх ёстой
+  let approverId: string | null = s(f, "approver_id") || null;
+  if (approverId) {
+    const { data: a } = await db.from("employees").select("id").eq("id", approverId).eq("organization_id", me.organization_id).eq("is_active", true).maybeSingle();
+    if (!a) approverId = null;
+  }
   const id = s(f, "id");
-  if (id) await db.from("departments").update({ name }).eq("id", id).eq("organization_id", me.organization_id);
-  else await db.from("departments").insert({ organization_id: me.organization_id, company_id: companyId, name });
+  if (id) await db.from("departments").update({ name, approver_id: approverId }).eq("id", id).eq("organization_id", me.organization_id);
+  else await db.from("departments").insert({ organization_id: me.organization_id, company_id: companyId, name, approver_id: approverId });
   revalidatePath(STRUCTURE);
 }
 
@@ -255,21 +261,6 @@ export async function saveEmployee(_p: FormState, f: FormData): Promise<FormStat
   if (error) return { ok: false, message: error.message };
   revalidatePath("/admin/employees");
   redirect("/admin/employees");
-}
-
-// ---------------- Хүсэлт батлах ----------------
-export async function reviewRequest(f: FormData) {
-  const me = await requireStaffAdmin();
-  const decision = s(f, "decision") === "approved" ? "approved" : "rejected";
-  await createAdminClient()
-    .from("requests")
-    .update({ status: decision, reviewed_by: me.id, reviewed_at: new Date().toISOString(), review_note: s(f, "review_note").slice(0, 1000) || null })
-    .eq("id", s(f, "id"))
-    .eq("organization_id", me.organization_id)
-    .eq("status", "pending")
-    .neq("employee_id", me.id); // өөрийнхөө хүсэлтийг өөрөө батлахгүй
-  revalidatePath("/admin/requests");
-  revalidatePath("/admin");
 }
 
 // ---------------- Томилолтын ирц батлах ----------------

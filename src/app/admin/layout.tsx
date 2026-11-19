@@ -4,15 +4,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { AdminNav } from "./admin-nav";
+import { reviewableEmployeeIds } from "@/lib/approvals";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const me = await requireStaffAdmin();
   const db = createAdminClient();
   const org = me.organization_id;
+  const allowed = await reviewableEmployeeIds(me);
+  let reqQ = db.from("requests").select("id", { count: "exact", head: true }).eq("organization_id", org).eq("status", "pending");
+  if (allowed !== null) reqQ = reqQ.in("employee_id", allowed.length ? allowed : ["00000000-0000-0000-0000-000000000000"]);
   const [active, total, requests, devices] = await Promise.all([
     db.from("employees").select("id", { count: "exact", head: true }).eq("organization_id", org).eq("is_active", true),
     db.from("employees").select("id", { count: "exact", head: true }).eq("organization_id", org),
-    db.from("requests").select("id", { count: "exact", head: true }).eq("organization_id", org).eq("status", "pending"),
+    reqQ,
     me.role === "admin"
       ? db.from("devices").select("id", { count: "exact", head: true }).eq("organization_id", org).eq("status", "pending")
       : Promise.resolve({ count: 0 }),

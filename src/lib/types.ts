@@ -31,7 +31,7 @@ export type Branch = {
 };
 
 export type Company = { id: string; organization_id: string; name: string };
-export type Department = { id: string; organization_id: string; company_id: string | null; name: string };
+export type Department = { id: string; organization_id: string; company_id: string | null; name: string; approver_id: string | null };
 /** Салбар (байгууллагын нэгж). is_station = ШТС */
 export type Unit = { id: string; organization_id: string; department_id: string; name: string; is_station: boolean; is_active: boolean };
 

@@ -1,23 +1,31 @@
 import { requireStaffAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fmtDate, fmtMinutes, fmtTime, todayUB } from "@/lib/time";
+import { addDays, fmtDate, fmtMinutes, fmtTime, todayUB } from "@/lib/time";
 import { STATUS_LABELS, type AttendanceLog } from "@/lib/types";
 import { reviewAttendance } from "../actions";
 
 type Row = AttendanceLog & { employee: { full_name: string; emp_code: string } | null; branch: { name: string } | null };
 
-export default async function AdminAttendance({ searchParams }: { searchParams: Promise<{ date?: string; trips?: string }> }) {
+const isDate = (s?: string) => /^\d{4}-\d{2}-\d{2}$/.test(s ?? "") && !Number.isNaN(Date.parse(s!));
+
+export default async function AdminAttendance({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; trips?: string }> }) {
   const me = await requireStaffAdmin();
   const sp = await searchParams;
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(sp.date ?? "") ? sp.date! : todayUB();
+  // Сонгоогүй бол эхлэх, дуусах хоёулаа өнөөдөр. Мужийг 93 хоногоор хязгаарлана.
+  const today = todayUB();
+  const to = isDate(sp.to) ? sp.to! : isDate(sp.from) ? sp.from! : today;
+  let from = isDate(sp.from) ? sp.from! : to;
+  if (from > to) from = to;
+  if (from < addDays(to, -92)) from = addDays(to, -92);
   const tripsOnly = sp.trips === "1";
   const db = createAdminClient();
   let q = db
     .from("attendance_logs")
     .select("*, employee:employees!attendance_logs_employee_id_fkey(full_name, emp_code), branch:branches(name)")
     .eq("organization_id", me.organization_id)
+    .order("work_date", { ascending: false })
     .order("check_in_at", { ascending: false });
-  q = tripsOnly ? q.eq("review_status", "pending").limit(100) : q.eq("work_date", date);
+  q = tripsOnly ? q.eq("review_status", "pending").limit(100) : q.gte("work_date", from).lte("work_date", to).limit(1000);
   const { data } = await q;
   const logs = (data ?? []) as Row[];
 
@@ -33,9 +41,11 @@ export default async function AdminAttendance({ searchParams }: { searchParams: 
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Ирцийн бүртгэл</h1>
       <div className="flex flex-wrap items-center gap-2">
-        <form className="flex gap-2">
-          <input type="date" name="date" defaultValue={date} className="input w-auto" />
+        <form className="flex flex-wrap items-end gap-2">
+          <div><label className="label">Эхлэх</label><input type="date" name="from" defaultValue={from} max={today} className="input w-auto" /></div>
+          <div><label className="label">Дуусах</label><input type="date" name="to" defaultValue={to} max={today} className="input w-auto" /></div>
           <button className="btn-ghost">Харах</button>
+          {(from !== today || to !== today) && <a href="?" className="btn-ghost">Өнөөдөр</a>}
         </form>
         <a href="?trips=1" className={`rounded-full px-3 py-1 text-sm ${tripsOnly ? "bg-brand text-white" : "bg-white ring-1 ring-gray-200"}`}>
           Батлах шаардлагатай томилолт

@@ -27,7 +27,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
     db.from("companies").select("*").eq("organization_id", org).order("created_at"),
     db.from("departments").select("*").eq("organization_id", org).order("name"),
     db.from("units").select("*").eq("organization_id", org).order("name"),
-    db.from("employees").select("company_id, department_id, unit_id").eq("organization_id", org).eq("is_active", true),
+    db.from("employees").select("id, full_name, company_id, department_id, unit_id").eq("organization_id", org).eq("is_active", true).order("full_name"),
   ]);
   const companies = (c ?? []) as Company[];
   const depts = (d ?? []) as Department[];
@@ -37,6 +37,17 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
   const byDept = (id: string) => emps.filter((x) => x.department_id === id).length;
   const byUnit = (id: string) => emps.filter((x) => x.unit_id === id).length;
   const noDept = emps.filter((x) => !x.department_id).length;
+  const empName = new Map(emps.map((x) => [x.id, x.full_name as string]));
+  const approverSelect = (value?: string | null) => (
+    <div>
+      <label className="label">✅ Хүсэлт батлагч</label>
+      <select name="approver_id" className="input" defaultValue={value ?? ""}>
+        <option value="">— Админ батална</option>
+        {emps.map((x) => <option key={x.id} value={x.id}>{x.full_name}</option>)}
+      </select>
+      <p className="mt-1 text-xs text-gray-500">Энэ алба хэлтсийн ажилтнуудын цагийн хүсэлтийг батална.</p>
+    </div>
+  );
 
   const addDepartment = (
     <Modal label={<><Icon name="plus" /> Алба хэлтэс нэмэх</>} title="Алба хэлтэс нэмэх" closeOnSubmit buttonClassName="btn-primary">
@@ -52,6 +63,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
             </select>
           </div>
           <div><label className="label">Нэр</label><input name="name" className="input" placeholder="Борлуулалтын алба" required /></div>
+          {approverSelect()}
           <button className="btn-primary w-full">Нэмэх</button>
         </form>
       )}
@@ -73,11 +85,12 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
     return (
       <Modal label={<Icon name="edit" />} title={`Алба хэлтэс: ${dp.name}`} buttonClassName={iconBtn}>
         <div className="space-y-4">
-          <form action={saveDepartment} className="flex gap-2">
+          <form action={saveDepartment} className="space-y-3">
             <input type="hidden" name="id" value={dp.id} />
             <input type="hidden" name="company_id" value={dp.company_id ?? ""} />
-            <input name="name" defaultValue={dp.name} className="input" required />
-            <button className="btn-ghost">Хадгалах</button>
+            <div><label className="label">Нэр</label><input name="name" defaultValue={dp.name} className="input" required /></div>
+            {approverSelect(dp.approver_id)}
+            <button className="btn-primary w-full">Хадгалах</button>
           </form>
 
           <div>
@@ -214,6 +227,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
                                 {deptEditor(dp)}
                               </div>
                               <div className="mt-2"><Count n={byDept(dp.id)} /></div>
+                              <p className="mt-1.5 truncate text-xs text-gray-500">✅ Батлагч: {dp.approver_id ? empName.get(dp.approver_id) ?? "—" : "Админ"}</p>
                               {myUnits.length > 0 && (
                                 <ul className="mt-3 space-y-1 border-t border-gray-200 pt-2 text-left text-sm">
                                   {myUnits.map((un) => (
@@ -239,18 +253,19 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
         /* ---------------- Жагсаалт ---------------- */
         <div className="card overflow-x-auto p-0">
           <table className="table">
-            <thead><tr><th>Компани</th><th>Алба хэлтэс</th><th>Салбар</th><th>Ажилтан</th><th></th></tr></thead>
+            <thead><tr><th>Компани</th><th>Алба хэлтэс</th><th>Батлагч</th><th>Салбар</th><th>Ажилтан</th><th></th></tr></thead>
             <tbody>
               {companies.flatMap((co) => {
                 const myDepts = depts.filter((x) => x.company_id === co.id);
                 if (myDepts.length === 0)
-                  return [<tr key={co.id}><td className="font-semibold">{co.name}</td><td colSpan={2} className="text-gray-400">—</td><td>{byCompany(co.id)}</td><td>{companyEditor(co)}</td></tr>];
+                  return [<tr key={co.id}><td className="font-semibold">{co.name}</td><td colSpan={3} className="text-gray-400">—</td><td>{byCompany(co.id)}</td><td>{companyEditor(co)}</td></tr>];
                 return myDepts.map((dp, i) => {
                   const myUnits = units.filter((x) => x.department_id === dp.id);
                   return (
                     <tr key={dp.id}>
                       <td className="font-semibold">{i === 0 ? <span className="flex items-center gap-1">{co.name} {companyEditor(co)}</span> : ""}</td>
                       <td>{dp.name}</td>
+                      <td className="text-xs">{dp.approver_id ? empName.get(dp.approver_id) ?? "—" : <span className="text-gray-400">Админ</span>}</td>
                       <td className="text-xs">
                         {myUnits.length ? myUnits.map((un) => <span key={un.id} className="mr-1 inline-block rounded bg-gray-100 px-1.5 py-0.5">{un.is_station ? "⛽ " : ""}{un.name} · {byUnit(un.id)}</span>) : <span className="text-gray-400">—</span>}
                       </td>

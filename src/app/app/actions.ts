@@ -202,7 +202,7 @@ export async function submitRequest(_prev: FormState, form: FormData): Promise<F
   const reason = String(form.get("reason") ?? "").trim();
   if (!REQUEST_TYPES.includes(type)) return { ok: false, message: "Хүсэлтийн төрлөө сонгоно уу." };
   if (!start || !end || !reason) return { ok: false, message: "Бүх талбарыг бөглөнө үү." };
-  if (reason.length > 1000) return { ok: false, message: "Шалтгаан хэт урт байна (1000 тэмдэгтээс ихгүй)." };
+  if (reason.length > 1000) return { ok: false, message: "Тайлбар хэт урт байна (1000 тэмдэгтээс ихгүй)." };
   // datetime-local утга нь УБ цагаар
   const startAt = new Date(`${start}:00+08:00`);
   const endAt = new Date(`${end}:00+08:00`);
