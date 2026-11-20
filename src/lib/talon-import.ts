@@ -1,12 +1,13 @@
 /**
  * Excel-ээс хуулж буулгасан зарагдсан талоны жагсаалтыг задлана.
- * Мөр бүр: Харилцагч | AB | 1234567   эсвэл   Харилцагч | AB1234567   (сүүлд нь огноо байж болно)
+ * Мөр бүр: [Огноо |] Харилцагч | AB | 1234567   эсвэл   [Огноо |] Харилцагч | AB1234567
+ * Огноо (2026.05.08) эхний эсвэл сүүлийн баганад байж болно.
  * Харилцагч нь нэр, регистр эсвэл «2026813-Тэс Ойл ХХК» хэлбэртэй байж болно.
  */
 import { nameKey, registerKey, splitRegisterName } from "./customer-import";
 import { fmtSerial, normalizeSerial, talonAmount } from "./talon";
 
-export const MAX_TALON_IMPORT = 5000;
+export const MAX_TALON_IMPORT = 20000;
 
 export type TalonImportRow = {
   line: number;
@@ -20,18 +21,28 @@ export type TalonImportRow = {
 export type TalonImportResult = {
   rows: TalonImportRow[];
   errors: { line: number; text: string; message: string }[];
-  duplicates: { line: number; serial: string; firstLine: number }[];
+  /** Ижил сериал, гэхдээ харилцагч эсвэл огноо өөр — зөрчил, импортлохгүй */
+  duplicates: { line: number; serial: string; firstLine: number; text: string; firstText: string }[];
+  /** Сериал, харилцагч, огноо гурвуулаа ижил — нэгийг нь үлдээж бусдыг хассан */
+  removed: { line: number; serial: string; firstLine: number }[];
 };
 
 // "AB" + 1–7 оронтой тоо (зай, зураастай байж болно). Кирилл А/В/С-г normalizeSerial засна.
 const SERIAL = /(?:^|[^A-Z0-9])(A[ABC])[\s\-_.]*(\d{1,7})(?![0-9])/;
 const DATE = /^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/;
 
+/** Жинхэнэ огноо эсэх (2026-02-30 гэх мэтийг хасна) */
+function validDate(d: string): boolean {
+  const t = new Date(`${d}T00:00:00Z`);
+  return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d;
+}
+
 export function parseTalonPaste(text: string): TalonImportResult {
   const rows: TalonImportRow[] = [];
   const errors: TalonImportResult["errors"] = [];
   const duplicates: TalonImportResult["duplicates"] = [];
-  const seen = new Map<string, number>();
+  const removed: TalonImportResult["removed"] = [];
+  const seen = new Map<string, { line: number; text: string; key: string }>();
 
   text.replace(/\r/g, "").split("\n").forEach((raw, i) => {
     const line = i + 1;
@@ -39,13 +50,15 @@ export function parseTalonPaste(text: string): TalonImportResult {
     let cells = raw.split("\t").map((c) => c.trim().replace(/^"|"$/g, "").trim());
     const shown = cells.filter(Boolean).join(" | ").slice(0, 90);
 
-    // Сүүлийн нүд огноо бол салгана
+    // Эхний эсвэл сүүлийн нүд огноо (2026.05.08) бол салгана
     let date: string | null = null;
-    const last = cells.at(-1) ?? "";
-    const dm = DATE.exec(last);
-    if (dm) {
-      date = `${dm[1]}-${dm[2].padStart(2, "0")}-${dm[3].padStart(2, "0")}`;
-      cells = cells.slice(0, -1);
+    for (const pos of [0, cells.length - 1]) {
+      const dm = DATE.exec(cells[pos] ?? "");
+      if (!dm || date) continue;
+      const d = `${dm[1]}-${dm[2].padStart(2, "0")}-${dm[3].padStart(2, "0")}`;
+      if (!validDate(d)) return errors.push({ line, text: shown, message: `огноо буруу: ${cells[pos]}` });
+      date = d;
+      cells = pos === 0 ? cells.slice(1) : cells.slice(0, -1);
     }
 
     // Харилцагчийн нүднүүдийн дараах хэсгээс сериалыг хайна (сүүлээс нь)
@@ -77,12 +90,17 @@ export function parseTalonPaste(text: string): TalonImportResult {
     const cust = splitRegisterName(customerText);
     if (!cust.name && !cust.register) return errors.push({ line, text: shown, message: "харилцагч хоосон" });
 
+    // Харилцагч + огноо: ижил бол бүрэн давхардал (хасна), өөр бол зөрчил
+    const key = `${newCustomerKey(cust.name, cust.register)}|${date ?? ""}`;
     const first = seen.get(serial);
-    if (first) return duplicates.push({ line, serial, firstLine: first });
-    seen.set(serial, line);
+    if (first) {
+      if (first.key === key) return removed.push({ line, serial, firstLine: first.line });
+      return duplicates.push({ line, serial, firstLine: first.line, text: shown, firstText: first.text });
+    }
+    seen.set(serial, { line, text: shown, key });
     rows.push({ line, customerText, customerName: cust.name, customerRegister: cust.register, serial, amount: talonAmount(serial) ?? 0, date });
   });
-  return { rows, errors, duplicates };
+  return { rows, errors, duplicates, removed };
 }
 
 export type CustomerRef = { id: string; name: string; register: string | null };

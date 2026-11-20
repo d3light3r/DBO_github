@@ -87,11 +87,11 @@ export async function importTalons(_p: FormState, f: FormData): Promise<FormStat
   const today = todayUB();
   const defaultDate = isDate(s(f, "sold_date")) ? s(f, "sold_date") : today;
   const createMissing = f.get("create_missing") === "on";
-  const { rows, errors, duplicates } = parseTalonPaste(String(f.get("data") ?? ""));
+  const { rows, errors, duplicates, removed } = parseTalonPaste(String(f.get("data") ?? ""));
 
   // Мөнгөн бүртгэл тул алдаатай, давхар мөртэй бол юу ч оруулахгүй
   if (errors.length) return { ok: false, message: `Алдаатай ${errors.length} мөр байна (${errors.slice(0, 5).map((e) => `${e.line}-р мөр`).join(", ")}${errors.length > 5 ? " ..." : ""}). Засаад дахин буулгана уу.` };
-  if (duplicates.length) return { ok: false, message: `Нэг сериал давхар орсон ${duplicates.length} мөр байна (${duplicates.slice(0, 5).map((d) => `${d.line}-р мөр ${d.serial}`).join(", ")}). Засаад дахин буулгана уу.` };
+  if (duplicates.length) return { ok: false, message: `Нэг сериал өөр харилцагч/огноотой давхар орсон ${duplicates.length} мөр байна (${duplicates.slice(0, 5).map((d) => `${d.line}-р мөр ${d.serial}`).join(", ")}). Засаад дахин буулгана уу.` };
   if (!rows.length) return { ok: false, message: "Импортлох мөр алга." };
   if (rows.length > MAX_TALON_IMPORT) return { ok: false, message: `Нэг удаад ${MAX_TALON_IMPORT} хүртэл талон импортлоно.` };
   const future = rows.find((r) => (r.date ?? defaultDate) > today);
@@ -115,8 +115,9 @@ export async function importTalons(_p: FormState, f: FormData): Promise<FormStat
   // Системд аль хэдийн байгаа сериал
   const serials = rows.map((r) => r.serial);
   const taken: string[] = [];
-  for (let i = 0; i < serials.length; i += 300) {
-    const { data, error } = await db.from("talons").select("serial").eq("organization_id", org).in("serial", serials.slice(i, i + 300));
+  // Cloudflare-ийн нэг хүсэлтэд дуудах тооны хязгаараас болж том багцаар шалгана
+  for (let i = 0; i < serials.length; i += 800) {
+    const { data, error } = await db.from("talons").select("serial").eq("organization_id", org).in("serial", serials.slice(i, i + 800));
     if (error) return { ok: false, message: error.message };
     taken.push(...(data ?? []).map((t) => t.serial as string));
   }
@@ -146,7 +147,7 @@ export async function importTalons(_p: FormState, f: FormData): Promise<FormStat
   const total = rows.reduce((t, r) => t + r.amount, 0);
   return {
     ok: true,
-    message: `${rows.length} талон зарагдсанаар бүртгэгдлээ, нийт ${new Intl.NumberFormat("en-US").format(total)}₮.${missing.size ? ` ${missing.size} шинэ харилцагч үүсгэлээ.` : ""}`,
+    message: `${rows.length} талон зарагдсанаар бүртгэгдлээ, нийт ${new Intl.NumberFormat("en-US").format(total)}₮.${missing.size ? ` ${missing.size} шинэ харилцагч үүсгэлээ.` : ""}${removed.length ? ` ${removed.length} яг ижил давхар мөрийг хассан.` : ""}`,
   };
 }
 

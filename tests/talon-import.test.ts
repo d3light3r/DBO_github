@@ -24,7 +24,9 @@ test("талон импорт: харилцагч | AB | тоо, харилца�
       [5, "Тэс ХХК", null, "AB7654321", 50000, null],
     ],
   );
-  assert.deepEqual(r.duplicates, [{ line: 6, serial: "AB1234567", firstLine: 2 }]);
+  // 6-р мөр нь 2-р мөрийн яг хуулбар (сериал, харилцагч, огноо ижил) → хасагдана
+  assert.deepEqual(r.removed.map((d) => [d.line, d.serial, d.firstLine]), [[6, "AB1234567", 2]]);
+  assert.deepEqual(r.duplicates, []);
   assert.deepEqual(r.errors.map((e) => e.line), [7, 8]);
 });
 
@@ -37,4 +39,23 @@ test("харилцагч таних: регистрээр, эсвэл нэрээ
   assert.equal(find("", "2026813")?.id, "2");
   assert.equal(find("Өөр нэр", "2026813")?.id, "2");
   assert.equal(find("Шинэ ХХК", null), null);
+});
+
+test("огноо эхний баганад: 2026.05.08 | харилцагч | AB | тоо; нэг харилцагчид олон талон", () => {
+  const r = parseTalonPaste(["2026.05.08\tШТС-2\tAB\t671", "2026.05.08\tШТС-2\tAB\t672", "2026.05.09\tШТС-2\tAB\t671", "2026.02.30\tШТС-2\tAB\t9"].join("\n"));
+  assert.deepEqual(r.rows.map((x) => [x.customerName, x.serial, x.date]), [
+    ["Штс-2", "AB0000671", "2026-05-08"],
+    ["Штс-2", "AB0000672", "2026-05-08"],
+  ]);
+  assert.deepEqual(r.duplicates.map((d) => [d.line, d.firstLine, d.serial, d.firstText]), [[3, 1, "AB0000671", "2026.05.08 | ШТС-2 | AB | 671"]]);
+  assert.deepEqual(r.errors.map((e) => e.line), [4]);
+});
+
+test("сериал, харилцагч, огноо ижил бол нэгийг нь үлдээнэ; өөр бол зөрчил", () => {
+  const r = parseTalonPaste(
+    ["2026.05.08\tШТС-2\tAB\t671", "2026.05.08\tштс 2\tAB\t0000671", "2026.05.08\tШТС-2\tAB\t672", "2026.05.09\tШТС-2\tAB\t672", "2026.05.08\tӨөр\tAB\t671"].join("\n"),
+  );
+  assert.deepEqual(r.rows.map((x) => x.serial), ["AB0000671", "AB0000672"]);
+  assert.deepEqual(r.removed.map((d) => [d.line, d.firstLine]), [[2, 1]]);
+  assert.deepEqual(r.duplicates.map((d) => [d.line, d.firstLine]), [[4, 3], [5, 1]]);
 });

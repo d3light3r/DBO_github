@@ -27,11 +27,12 @@ export function TalonImportForm({ customers, today }: { customers: CustomerRef[]
     <form action={action} className="card space-y-3">
       <h2 className="font-semibold">Excel-ээс импортлох (зарагдсан талон)</h2>
       <p className="text-xs text-gray-500">
-        Мөр бүр: <b>Харилцагч · AB · 1234567</b> (3 багана) эсвэл <b>Харилцагч · AB1234567</b>. Харилцагч нь нэр, регистр эсвэл «2026813-Тэс Ойл ХХК» байж болно.
-        Тоо 7-оос цөөн оронтой бол урдаас нь 0-ээр нөхнө. Сүүлийн баганад огноо (2026.11.15) байвал түүгээр, үгүй бол доорх огноогоор бүртгэнэ.
+        Мөр бүр: <b>Зарсан огноо · Харилцагч · AB · 1234567</b> (жнь 2026.05.08 · Эс Ти Юу · AB · 1234567). «AB1234567» нэг баганад байсан ч болно.
+        Харилцагч нь нэр, регистр эсвэл «2026813-Тэс Ойл ХХК» байж болно; нэг харилцагчид олон талон байж болно.
+        Тоо 7-оос цөөн оронтой бол урдаас нь 0-ээр нөхнө. Огноогүй мөрийг доорх огноогоор бүртгэнэ.
       </p>
       <textarea name="data" value={text} onChange={(e) => setText(e.target.value)} rows={6} className="input font-mono text-xs"
-        placeholder={"Эс Ти Юу\tAB\t1234567\n2026813-Тэс Ойл ХХК\tAA\t0000225"} spellCheck={false} />
+        placeholder={"2026.05.08\tЭс Ти Юу\tAB\t1234567\n2026.05.08\tЭс Ти Юу\tAB\t1234568\n2026.05.09\t2026813-Тэс Ойл ХХК\tAA\t0000225"} spellCheck={false} />
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="label">Зарсан огноо (мөрөнд огноогүй бол)</label>
@@ -47,6 +48,7 @@ export function TalonImportForm({ customers, today }: { customers: CustomerRef[]
           <p>
             <b className="text-emerald-700">{view.length} талон</b> · {[...byType].sort((a, b) => b[0] - a[0]).map(([a, n]) => `${fmtMoney(a)} × ${n}`).join(", ")} · нийт <b>{fmtMoney(total)}</b>
             {unknown.size > 0 && <span className="text-amber-700"> · {unknown.size} бүртгэлгүй харилцагч</span>}
+            {parsed.removed.length > 0 && <span className="text-gray-500"> · {parsed.removed.length} яг ижил давхар мөрийг хасав</span>}
           </p>
           {parsed.errors.length > 0 && (
             <div className="rounded-lg bg-brand-soft px-3 py-2 text-brand">
@@ -56,8 +58,23 @@ export function TalonImportForm({ customers, today }: { customers: CustomerRef[]
           )}
           {parsed.duplicates.length > 0 && (
             <div className="rounded-lg bg-brand-soft px-3 py-2 text-brand">
-              <p className="font-medium">Нэг сериал давхар орсон {parsed.duplicates.length} мөр:</p>
-              {parsed.duplicates.slice(0, 20).map((d) => <p key={d.line}>{d.line}-р мөр: {d.serial} ({d.firstLine}-р мөртэй давхцсан)</p>)}
+              <p className="font-medium">Нэг сериал өөр харилцагч эсвэл өөр огноотойгоор 2 удаа орсон {parsed.duplicates.length} мөр. Аль нь зөв болохыг Excel дээрээ шалгаад нэгийг нь хасна уу:</p>
+              <div className="mt-1 max-h-56 overflow-auto">
+                <table className="table">
+                  <thead><tr><th>Сериал</th><th>Мөр</th><th>Мөрийн агуулга</th><th>Давхцсан мөр</th><th>Түүний агуулга</th></tr></thead>
+                  <tbody>
+                    {parsed.duplicates.map((d) => (
+                      <tr key={d.line}>
+                        <td className="font-mono">{d.serial}</td>
+                        <td>{d.line}</td>
+                        <td className="font-mono">{d.text}</td>
+                        <td>{d.firstLine}</td>
+                        <td className="font-mono">{d.firstText}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
           {view.length > 0 && (
