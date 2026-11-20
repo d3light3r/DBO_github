@@ -21,6 +21,11 @@ export default async function EmployeeLayout({ children }: { children: React.Rea
               </Link>
             )}
             {emp.role !== "employee" && (
+              <Link href="/talon" className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium">
+                🎫 Талон апп →
+              </Link>
+            )}
+            {emp.role !== "employee" && (
               <Link href="/admin" className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium">
                 Удирдлага →
               </Link>

@@ -28,7 +28,7 @@ export function SellForm({ customers, today }: { customers: Customer[]; today: s
             <option key={c.id} value={c.id}>{c.name}{c.register ? ` (${c.register})` : ""}</option>
           ))}
         </select>
-        <Link href="/admin/customers" className="mt-1 inline-block text-xs text-brand">+ Шинэ харилцагч нэмэх</Link>
+        <Link href="/talon/customers" className="mt-1 inline-block text-xs text-brand">+ Шинэ харилцагч нэмэх</Link>
       </div>
       <TalonRangeFields key={k} />
       <div>

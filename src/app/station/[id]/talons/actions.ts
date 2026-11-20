@@ -36,7 +36,7 @@ export async function redeemTalons(_p: RedeemState, f: FormData): Promise<Redeem
   });
   if (error) return { ok: false, message: talonDbError(error) };
   revalidatePath(`/station/${stationId}`, "layout");
-  revalidatePath("/admin/talons");
+  revalidatePath("/talon", "layout");
   return {
     ok: true,
     message: `${data} ширхэг ${fmtMoney(range.amount)}-ийн талон оруулагдлаа (${range.from}${range.count > 1 ? ` – ${range.to}` : ""}). Нийт ${fmtMoney(range.total)}.`,

@@ -13,6 +13,7 @@ export default async function StationAppLayout({ children }: { children: React.R
           </Link>
           <div className="flex gap-2 text-xs">
             <Link href="/app" className="rounded-full bg-white/15 px-3 py-1">Ирц бүртгэл</Link>
+            {isStaffAdmin && <Link href="/talon" className="rounded-full bg-white/15 px-3 py-1">🎫 Талон</Link>}
             {isStaffAdmin && <Link href="/admin" className="rounded-full bg-white/15 px-3 py-1">Удирдлага</Link>}
           </div>
         </div>

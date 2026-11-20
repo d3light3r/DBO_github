@@ -30,8 +30,8 @@ export async function saveCustomer(_p: FormState, f: FormData): Promise<FormStat
     ? await db.from("customers").update(row).eq("id", id).eq("organization_id", me.organization_id)
     : await db.from("customers").insert(row);
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/admin/customers");
-  if (id) redirect("/admin/customers");
+  revalidatePath("/talon/customers");
+  if (id) redirect("/talon/customers");
   return { ok: true, message: `${row.name} нэмэгдлээ.` };
 }
 
@@ -53,7 +53,7 @@ export async function sellTalons(_p: FormState, f: FormData): Promise<FormState>
     p_by: me.id,
   });
   if (error) return { ok: false, message: talonDbError(error) };
-  revalidatePath("/admin/talons");
+  revalidatePath("/talon", "layout");
   return {
     ok: true,
     message: `${data} ширхэг ${fmtMoney(range.amount)}-ийн талон (${range.from}${range.count > 1 ? ` – ${range.to}` : ""}) зарагдсанаар бүртгэгдлээ. Нийт ${fmtMoney(range.total)}.`,
@@ -71,8 +71,8 @@ export async function saveTalonSettings(_p: FormState, f: FormData): Promise<For
     .from("talon_settings")
     .upsert({ organization_id: me.organization_id, backdate_days: days, updated_by: me.id, updated_at: new Date().toISOString() });
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/admin/talons");
-  revalidatePath("/app/talons");
+  revalidatePath("/talon", "layout");
+  revalidatePath("/station", "layout");
   return {
     ok: true,
     message: days ? `Ажилтнууд ${days} хоног хүртэл нөхөж оруулах боломжтой боллоо.` : "Зөвхөн тухайн өдрөөр оруулна.",
@@ -92,7 +92,7 @@ export async function undoTalons(_p: FormState, f: FormData): Promise<FormState>
     p_mode: mode,
   });
   if (error) return { ok: false, message: talonDbError(error) };
-  revalidatePath("/admin/talons");
+  revalidatePath("/talon", "layout");
   if (!data) return { ok: false, message: "Тохирох бүртгэл олдсонгүй." };
   return {
     ok: true,

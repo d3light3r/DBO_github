@@ -23,7 +23,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Харилцагч</h1>
+      <h1 className="text-xl font-bold">Харилцагч</h1>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-3">
           <form className="flex gap-2">
@@ -43,7 +43,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                       <td>{c.phone ?? "—"}</td>
                       <td>
                         {a ? (
-                          <a className="text-brand underline" href={`/admin/talons?customer=${c.id}`}>{a.sold_cnt} / {a.redeemed_cnt}</a>
+                          <a className="text-brand underline" href={`/talon?customer=${c.id}`}>{a.sold_cnt} / {a.redeemed_cnt}</a>
                         ) : "—"}
                       </td>
                       <td>{a ? fmtMoney(Number(a.outstanding_amount)) : "—"}</td>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
-import { saveCustomer } from "../talons/actions";
+import { saveCustomer } from "../actions";
 import { FormMessage } from "@/components/form-message";
 
 export type Customer = {
@@ -37,7 +37,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
       <FormMessage state={state} />
       <div className="flex gap-2">
         <button className="btn-primary" disabled={pending}>Хадгалах</button>
-        {customer && <Link href="/admin/customers" className="btn-ghost">Болих</Link>}
+        {customer && <Link href="/talon/customers" className="btn-ghost">Болих</Link>}
       </div>
     </form>
   );

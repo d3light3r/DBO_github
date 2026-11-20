@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtMoney, TALON_TYPES } from "@/lib/talon";
 import { parseFilters, talonQuery, type TalonRow } from "@/lib/talon-query";
 import { fmtDate, fmtDateTime, todayUB } from "@/lib/time";
-import { SellForm, SettingsForm, UndoForm } from "./talon-forms";
 
 const PAGE = 100;
 
@@ -21,11 +20,10 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   const db = createAdminClient();
   const org = me.organization_id;
 
-  const [list, branches, customers, settings, summary, bsum] = await Promise.all([
+  const [list, branches, customers, summary, bsum] = await Promise.all([
     talonQuery(org, f, true).range((page - 1) * PAGE, page * PAGE - 1),
     db.from("units").select("id, name").eq("organization_id", org).eq("is_station", true).order("name"),
     db.from("customers").select("id, name, register").eq("organization_id", org).eq("is_active", true).order("name").limit(1000),
-    db.from("talon_settings").select("backdate_days").eq("organization_id", org).maybeSingle(),
     db.rpc("talon_summary", { p_org: org, p_from: sumFrom, p_to: sumTo }),
     db.rpc("talon_branch_summary", { p_org: org, p_from: sumFrom, p_to: sumTo }),
   ]);
@@ -35,14 +33,13 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   const branchList = (branches.data ?? []) as { id: string; name: string }[];
   const sums = (summary.data ?? []) as Summary[];
   const bsums = (bsum.data ?? []) as BranchSum[];
-  const isAdmin = me.role === "admin";
 
   const qs = (patch: Record<string, string | number>) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries({ ...sp, ...patch })) if (v !== undefined && v !== "") p.set(k, String(v));
     return `?${p.toString()}`;
   };
-  const exportHref = `/admin/talons/export${qs({ page: "" })}`;
+  const exportHref = `/talon/export${qs({ page: "" })}`;
 
   const sumOf = (k: "sold_cnt" | "redeemed_cnt" | "outstanding_cnt") =>
     sums.reduce((t, s) => ({ cnt: t.cnt + Number(s[k]), amt: t.amt + Number(s[k]) * s.denomination }), { cnt: 0, amt: 0 });
@@ -55,8 +52,11 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Талон</h1>
-        <a href={exportHref} className="btn-ghost">⬇ Excel</a>
+        <h1 className="text-xl font-bold">Талоны бүртгэл</h1>
+        <div className="flex gap-2">
+          <a href="/talon/sell" className="btn-primary">+ Талон зарах</a>
+          <a href={exportHref} className="btn-ghost">⬇ Excel</a>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -96,8 +96,7 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
         </table>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-        <div className="min-w-0 space-y-3">
+      <div className="min-w-0 space-y-3">
           <form className="card grid grid-cols-2 gap-2 md:grid-cols-4">
             <div>
               <label className="label">Төрөл</label>
@@ -140,7 +139,7 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
             <div><label className="label">Сериал</label><input name="serial" defaultValue={f.serial} className="input font-mono uppercase" placeholder="AB00012" /></div>
             <div className="col-span-2 flex gap-2 md:col-span-4">
               <button className="btn-primary">Шүүх</button>
-              <a href="/admin/talons" className="btn-ghost">Цэвэрлэх</a>
+              <a href="/talon" className="btn-ghost">Цэвэрлэх</a>
               <span className="ml-auto self-center text-xs text-gray-500">{total} талон</span>
             </div>
           </form>
@@ -181,12 +180,6 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
           )}
         </div>
 
-        <div className="space-y-6">
-          <SellForm customers={(customers.data ?? []) as { id: string; name: string; register: string | null }[]} today={today} />
-          {isAdmin && <SettingsForm backdateDays={settings.data?.backdate_days ?? null} />}
-          {isAdmin && <UndoForm />}
-        </div>
-      </div>
     </div>
   );
 }

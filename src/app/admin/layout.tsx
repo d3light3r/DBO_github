@@ -48,6 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="flex gap-3 text-xs text-gray-400 md:hidden">
             <Link href="/app">Ажилтны апп</Link>
             <Link href="/station">⛽ ШТС</Link>
+            <Link href="/talon">🎫 Талон</Link>
           </div>
         </div>
         <AdminNav isAdmin={me.role === "admin"} counts={{ requests: requests.count ?? 0, devices: devices.count ?? 0 }} />
@@ -57,6 +58,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
           <Link href="/station" className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-gray-400 hover:bg-white/5 hover:text-white">
             <Icon name="fuel" className="h-4 w-4" /> ШТС апп
+          </Link>
+          <Link href="/talon" className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-gray-400 hover:bg-white/5 hover:text-white">
+            <Icon name="ticket" className="h-4 w-4" /> Талон апп
           </Link>
         </div>
       </aside>

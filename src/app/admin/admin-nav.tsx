@@ -11,8 +11,6 @@ const items: Item[] = [
   { href: "/admin/attendance", label: "Ирцийн бүртгэл", icon: "clock", admin: false },
   { href: "/admin/requests", label: "Цагийн хүсэлт", icon: "send", admin: false, badge: "requests" },
   { href: "/admin/reports", label: "Тайлан", icon: "report", admin: false },
-  { href: "/admin/talons", label: "Талон", icon: "ticket", admin: false },
-  { href: "/admin/customers", label: "Харилцагч", icon: "building", admin: false },
   { href: "/admin/employees", label: "Ажилтан", icon: "users", admin: true },
   { href: "/admin/settings/structure", label: "Алба хэлтэс", icon: "tree", admin: true },
   { href: "/admin/settings/schedules", label: "Хуваарь", icon: "calendar", admin: true },
