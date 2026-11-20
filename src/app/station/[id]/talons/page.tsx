@@ -1,6 +1,6 @@
 import { requireStationPage } from "@/lib/station-access";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fmtMoney, groupRuns } from "@/lib/talon";
+import { customerLabel, fmtMoney, groupRuns } from "@/lib/talon";
 import { addDays, fmtDate, fmtDateTime, todayUB } from "@/lib/time";
 import { RedeemForm } from "./redeem-form";
 
@@ -8,7 +8,7 @@ type Row = {
   serial: string;
   redeemed_date: string;
   redeemed_recorded_at: string;
-  customer: { name: string } | null;
+  customer: { name: string; register: string | null } | null;
   redeemer: { full_name: string } | null;
 };
 type Totals = { today_cnt: number; today_amount: number; shift_cnt: number; shift_amount: number };
@@ -23,7 +23,7 @@ export default async function StationTalons({ params }: { params: Promise<{ id: 
     db.from("talon_settings").select("backdate_days").eq("organization_id", emp.organization_id).maybeSingle(),
     db.from("station_shifts").select("id").eq("branch_id", station.id).eq("status", "open").maybeSingle(),
     db.from("talons")
-      .select("serial, redeemed_date, redeemed_recorded_at, customer:customers(name), redeemer:employees!talons_redeemed_by_fkey(full_name)")
+      .select("serial, redeemed_date, redeemed_recorded_at, customer:customers(name, register), redeemer:employees!talons_redeemed_by_fkey(full_name)")
       .eq("redeemed_branch_id", station.id)
       .gte("redeemed_recorded_at", `${addDays(today, -6)}T00:00:00+08:00`)
       .order("redeemed_recorded_at", { ascending: false })
@@ -73,7 +73,7 @@ export default async function StationTalons({ params }: { params: Promise<{ id: 
                   <b className="tabular-nums">{fmtMoney(r.amount * r.count)}</b>
                 </div>
                 <p className="text-xs text-gray-500">
-                  {fmtMoney(r.amount)} × {r.count} · {r.first.customer?.name ?? "—"} · огноо {fmtDate(r.first.redeemed_date)}
+                  {fmtMoney(r.amount)} × {r.count} · {customerLabel(r.first.customer)} · огноо {fmtDate(r.first.redeemed_date)}
                 </p>
                 <p className="text-[11px] text-gray-400">{r.first.redeemer?.full_name} · {fmtDateTime(r.first.redeemed_recorded_at)}</p>
               </li>

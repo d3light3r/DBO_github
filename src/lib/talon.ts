@@ -164,3 +164,8 @@ export function talonDbError(err: { message: string; details?: string | null }):
       return err.message;
   }
 }
+
+/** Харилцагчийг харуулах: нэр, нэргүй бол регистр */
+export function customerLabel(c: { name?: string | null; register?: string | null } | null | undefined): string {
+  return c?.name?.trim() || c?.register || "—";
+}

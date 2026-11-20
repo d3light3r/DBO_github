@@ -1,7 +1,7 @@
 import { requireStaffAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fmtMoney, TALON_TYPES } from "@/lib/talon";
-import { parseFilters, talonQuery, type TalonRow } from "@/lib/talon-query";
+import { customerLabel, fmtMoney, TALON_TYPES } from "@/lib/talon";
+import { customerIdsFor, parseFilters, talonQuery, type TalonRow } from "@/lib/talon-query";
 import { fmtDate, fmtDateTime, todayUB } from "@/lib/time";
 
 const PAGE = 100;
@@ -20,10 +20,11 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   const db = createAdminClient();
   const org = me.organization_id;
 
-  const [list, branches, customers, summary, bsum] = await Promise.all([
-    talonQuery(org, f, true).range((page - 1) * PAGE, page * PAGE - 1),
+  const ids = await customerIdsFor(org, f.cq);
+  const [list, branches, picked, summary, bsum] = await Promise.all([
+    talonQuery(org, f, true, ids).range((page - 1) * PAGE, page * PAGE - 1),
     db.from("units").select("id, name").eq("organization_id", org).eq("is_station", true).order("name"),
-    db.from("customers").select("id, name, register").eq("organization_id", org).eq("is_active", true).order("name").limit(1000),
+    f.customer ? db.from("customers").select("name, register").eq("id", f.customer).maybeSingle() : Promise.resolve({ data: null }),
     db.rpc("talon_summary", { p_org: org, p_from: sumFrom, p_to: sumTo }),
     db.rpc("talon_branch_summary", { p_org: org, p_from: sumFrom, p_to: sumTo }),
   ]);
@@ -121,11 +122,14 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
               </select>
             </div>
             <div>
-              <label className="label">Харилцагч</label>
-              <select name="customer" defaultValue={f.customer} className="input">
-                <option value="">Бүгд</option>
-                {(customers.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <label className="label">Харилцагч (нэр эсвэл регистр)</label>
+              <input name="cq" defaultValue={f.cq} className="input" placeholder="Эс Ти Юу эсвэл 6000001" />
+              {f.customer && (
+                <p className="mt-1 text-xs text-gray-500">
+                  <input type="hidden" name="customer" value={f.customer} />
+                  Сонгосон: <b>{customerLabel(picked.data)}</b> · <a className="text-brand underline" href={qs({ customer: "", page: "" })}>болих</a>
+                </p>
+              )}
             </div>
             <div>
               <label className="label">Огноо</label>
@@ -154,7 +158,7 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
                   <tr key={r.id}>
                     <td className="whitespace-nowrap">{fmtMoney(r.denomination)}</td>
                     <td className="font-mono text-xs">{r.serial}</td>
-                    <td>{r.customer?.name ?? "—"}</td>
+                    <td>{customerLabel(r.customer)}{r.customer?.name && r.customer.register && <span className="block text-[11px] text-gray-400">{r.customer.register}</span>}</td>
                     <td className="text-xs">{fmtDate(r.sold_date)}</td>
                     <td className="text-xs">{r.redeemed_date ? fmtDate(r.redeemed_date) : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">ашиглаагүй</span>}</td>
                     <td className="text-xs">{r.branch?.name ?? "—"}</td>

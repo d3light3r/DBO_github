@@ -1,19 +1,31 @@
 import { requireStaffAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fmtMoney, groupRuns } from "@/lib/talon";
+import { customerLabel, fmtMoney, groupRuns } from "@/lib/talon";
 import { addDays, fmtDate, fmtDateTime, todayUB } from "@/lib/time";
 import { SellForm } from "../talon-forms";
 
-type Row = { serial: string; sold_date: string; sold_recorded_at: string; customer: { name: string } | null; seller: { full_name: string } | null };
+/** Идэвхтэй бүх харилцагч (Supabase нэг удаад 1000 мөр буцаадаг тул хуудаслаж авна) */
+async function loadCustomers(org: string) {
+  const db = createAdminClient();
+  const all: { id: string; name: string; register: string | null }[] = [];
+  for (let off = 0; off < 20000; off += 1000) {
+    const { data } = await db.from("customers").select("id, name, register").eq("organization_id", org).eq("is_active", true).order("name").range(off, off + 999);
+    all.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return all;
+}
+
+type Row = { serial: string; sold_date: string; sold_recorded_at: string; customer: { name: string; register: string | null } | null; seller: { full_name: string } | null };
 
 export default async function SellPage() {
   const me = await requireStaffAdmin();
   const db = createAdminClient();
   const today = todayUB();
   const [customers, recent] = await Promise.all([
-    db.from("customers").select("id, name, register").eq("organization_id", me.organization_id).eq("is_active", true).order("name").limit(1000),
+    loadCustomers(me.organization_id),
     db.from("talons")
-      .select("serial, sold_date, sold_recorded_at, customer:customers(name), seller:employees!talons_sold_by_fkey(full_name)")
+      .select("serial, sold_date, sold_recorded_at, customer:customers(name, register), seller:employees!talons_sold_by_fkey(full_name)")
       .eq("organization_id", me.organization_id)
       .gte("sold_recorded_at", `${addDays(today, -29)}T00:00:00+08:00`)
       .order("sold_recorded_at", { ascending: false })
@@ -25,7 +37,7 @@ export default async function SellPage() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[400px_1fr]">
-      <SellForm customers={(customers.data ?? []) as { id: string; name: string; register: string | null }[]} today={today} />
+      <SellForm customers={customers} today={today} />
       <section className="card min-w-0">
         <h2 className="mb-2 font-semibold">Сүүлийн 30 хоногт зарсан</h2>
         {runs.length === 0 ? (
@@ -38,7 +50,7 @@ export default async function SellPage() {
                 {runs.map((r) => (
                   <tr key={r.from + r.first.sold_recorded_at}>
                     <td className="whitespace-nowrap font-mono text-xs">{r.from}{r.count > 1 && ` – ${r.to}`}</td>
-                    <td>{r.first.customer?.name ?? "—"}</td>
+                    <td>{customerLabel(r.first.customer)}</td>
                     <td className="text-right tabular-nums">{fmtMoney(r.amount)} × {r.count}</td>
                     <td className="text-right font-medium tabular-nums">{fmtMoney(r.amount * r.count)}</td>
                     <td className="text-xs">{fmtDate(r.first.sold_date)}</td>

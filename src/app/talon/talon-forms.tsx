@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { saveTalonSettings, sellTalons, undoTalons, type FormState } from "./actions";
 import { FormMessage } from "@/components/form-message";
 import { TalonRangeFields } from "@/components/talon-range-fields";
+import { CustomerPicker } from "@/components/customer-picker";
 
 type Customer = { id: string; name: string; register: string | null };
 
@@ -22,12 +23,7 @@ export function SellForm({ customers, today }: { customers: Customer[]; today: s
       <h2 className="font-semibold">Талон зарах</h2>
       <div>
         <label className="label">Харилцагч</label>
-        <select name="customer_id" className="input" required defaultValue="">
-          <option value="" disabled>Сонгох</option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}{c.register ? ` (${c.register})` : ""}</option>
-          ))}
-        </select>
+        <CustomerPicker customers={customers} />
         <Link href="/talon/customers" className="mt-1 inline-block text-xs text-brand">+ Шинэ харилцагч нэмэх</Link>
       </div>
       <TalonRangeFields key={k} />

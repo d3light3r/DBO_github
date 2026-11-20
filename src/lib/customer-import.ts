@@ -4,7 +4,7 @@
  * Мөр бүрээс регистрийг хэлбэрээр нь танина:
  *   - 7 оронтой тоо                 → байгууллагын регистр (жнь 2026813)
  *   - 2 үсэг + 8 оронтой тоо        → хүний регистр (жнь УУ89021223)
- * Регистрийг (ба түүний хажуугийн зураас/зай) хассан үлдсэн хэсэг нь нэр. Регистр заавал биш.
+ * Регистрийг (ба түүний хажуугийн зураас/зай) хассан үлдсэн хэсэг нь нэр. Нэр, регистрийн аль нэг нь байхад хангалттай.
  * Том/жижиг үсэг, зай, зураасаар л ялгаатай нэрс ("эс ти юу", "Эс-Ти-Юу") нэг харилцагч.
  * Тиймээс "УУ89021223-ЧАНДМАНЬ БАТЦОГТ", "2026813 - Тэс-Ойл ХХК" аль аль нь зөв задарна,
  * нэр доторх зураас ("Тэс-Ойл") хадгалагдана.
@@ -88,11 +88,11 @@ export function parseCustomerPaste(text: string): ImportResult {
     // Хоёр баганад ижил текст байвал нэгийг нь авна
     const same = c0.replace(/\s+/g, " ").toUpperCase() === c1.replace(/\s+/g, " ").toUpperCase();
     const parsed = splitRegisterName(c1 && !same ? `${c0} - ${c1}` : c0 || c1);
-    if (!parsed.name) return errors.push({ line, text: shown, message: "нэр хоосон (зөвхөн регистр байна)" });
+    if (!parsed.name && !parsed.register) return errors.push({ line, text: shown, message: "нэр, регистр хоёулаа хоосон" });
     const nk = nameKey(parsed.name);
     // Ижил регистр, эсвэл ижил нэр (аль нэг нь регистргүй бол) → нэг харилцагч
     const sameReg = parsed.register ? byReg.get(registerKey(parsed.register)) : undefined;
-    const sameName = byName.get(nk);
+    const sameName = nk ? byName.get(nk) : undefined;
     const first = sameReg ?? (sameName && (!parsed.register || !sameName.register) ? sameName : undefined);
     if (first) {
       // Эхнийх нь регистргүй байсан бол энэ мөрийн регистрийг нөхнө
@@ -112,7 +112,7 @@ export function parseCustomerPaste(text: string): ImportResult {
       note: rest.filter(Boolean).join(" ").slice(0, 500) || null,
     };
     if (row.register) byReg.set(registerKey(row.register), row);
-    if (!byName.has(nk)) byName.set(nk, row);
+    if (nk && !byName.has(nk)) byName.set(nk, row);
     rows.push(row);
   });
   return { rows, errors, duplicates };

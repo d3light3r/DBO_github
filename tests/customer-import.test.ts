@@ -16,7 +16,7 @@ test("нэг нүднээс регистр, нэрийг салгана; нэр 
   assert.deepEqual(splitRegisterName("регистргүй ххк"), { register: null, kind: null, name: "Регистргүй ХХК" });
 });
 
-test("Excel буулгалт: регистр заавал биш, зөвхөн регистртэй мөр алдаа", () => {
+test("Excel буулгалт: нэр эсвэл регистрийн аль нэг байхад хангалттай", () => {
   const r = parseCustomerPaste(
     [
       "Регистр\tНэр",
@@ -29,10 +29,11 @@ test("Excel буулгалт: регистр заавал биш, зөвхөн �
   );
   assert.deepEqual(r.rows.map((x) => [x.line, x.name, x.register, x.phone, x.note]), [
     [2, "Чандмань Батцогт", "УУ89021223", null, null],
+    [3, "", "2026813", null, null],
     [4, "Тэс ХХК", "6123456", "99112233", "гэрээт"],
     [6, "Эс Энд Эм Сольюшн", "6366015", null, null],
   ]);
-  assert.deepEqual(r.errors.map((e) => e.line), [3]);
+  assert.deepEqual(r.errors, []);
   assert.deepEqual(r.duplicates.map((d) => [d.line, d.firstLine]), [[5, 2]]);
 });
 

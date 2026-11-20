@@ -39,7 +39,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   const a = agg.get(c.id);
                   return (
                     <tr key={c.id} className={c.is_active ? "" : "opacity-50"}>
-                      <td className="font-medium">{c.name}{c.note && <p className="text-xs font-normal text-gray-500">{c.note}</p>}</td>
+                      <td className="font-medium">{c.name || <span className="text-gray-400">—</span>}{c.note && <p className="text-xs font-normal text-gray-500">{c.note}</p>}</td>
                       <td>{c.register ?? "—"}</td>
                       <td>{c.phone ?? "—"}</td>
                       <td>

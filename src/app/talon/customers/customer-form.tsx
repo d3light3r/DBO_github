@@ -25,7 +25,7 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
     <form ref={ref} action={action} className="card h-fit space-y-3">
       <h2 className="font-semibold">{customer ? "Харилцагч засах" : "Шинэ харилцагч"}</h2>
       {customer && <input type="hidden" name="id" value={customer.id} />}
-      <div><label className="label">Нэр (байгууллага / хүн)</label><input name="name" className="input" defaultValue={customer?.name} required /></div>
+      <div><label className="label">Нэр (байгууллага / хүн) — нэр эсвэл регистрийн аль нэг заавал</label><input name="name" className="input" defaultValue={customer?.name} /></div>
       <div className="grid grid-cols-2 gap-2">
         <div><label className="label">Регистр</label><input name="register" className="input" defaultValue={customer?.register ?? ""} /></div>
         <div><label className="label">Утас</label><input name="phone" className="input" defaultValue={customer?.phone ?? ""} /></div>
