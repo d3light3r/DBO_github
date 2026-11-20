@@ -6,6 +6,8 @@ import { FORM_PREFIXES, fmtMoney, parseTalonRow, talonAmount } from "@/lib/talon
 type Row = { from: string; to: string; qty: string };
 const empty: Row = { from: "", to: "", qty: "" };
 const digits = (v: string) => v.replace(/\D/g, "").slice(0, 7);
+/** "225" -> "0000225": 7 оронтой болтол урдаас нь 0-ээр нөхнө */
+const pad7 = (v: string) => (v ? v.padStart(7, "0") : v);
 
 /**
  * AA / AB / AC гэсэн 3 мөр. Мөр бүрт: эхний дугаар, сүүлийн дугаар, тоо ширхэг.
@@ -22,7 +24,7 @@ export function TalonRangeFields({ autoFocus = false }: { autoFocus?: boolean })
       if (field === "qty" || (field === "from" && r.qty)) {
         // Тоо ширхэгээс сүүлийн дугаар
         const q = Number(r.qty);
-        r.to = r.qty && q >= 1 && start + q - 1 <= 9999999 ? String(start + q - 1).padStart(r.from.length, "0") : "";
+        r.to = r.qty && q >= 1 && start + q - 1 <= 9999999 ? pad7(String(start + q - 1)) : "";
       } else if (field === "to" || field === "from") {
         // Сүүлийн дугаараас тоо ширхэг
         const end = r.to ? Number(r.to) : null;
@@ -30,6 +32,12 @@ export function TalonRangeFields({ autoFocus = false }: { autoFocus?: boolean })
       }
     }
     setRows({ ...rows, [p]: r });
+  }
+
+  // Талбараас гарахад (эсвэл Enter) дугаарыг 7 орон болгоно
+  function pad(p: string, field: "from" | "to") {
+    const v = rows[p][field];
+    if (v && v.length < 7) setRows({ ...rows, [p]: { ...rows[p], [field]: pad7(v) } });
   }
 
   const parsed = FORM_PREFIXES.map((p) => ({ p, r: parseTalonRow(p, rows[p].from, rows[p].to, rows[p].qty) }));
@@ -51,9 +59,9 @@ export function TalonRangeFields({ autoFocus = false }: { autoFocus?: boolean })
           <span className="flex h-full items-center justify-center rounded-lg border border-gray-300 bg-gray-50 text-sm font-semibold" title={fmtMoney(talonAmount(p) ?? 0)}>
             {p}
           </span>
-          <input name={`from_${p}`} value={rows[p].from} onChange={(e) => update(p, "from", e.target.value)}
+          <input name={`from_${p}`} value={rows[p].from} onChange={(e) => update(p, "from", e.target.value)} onBlur={() => pad(p, "from")}
             className="input font-mono tabular-nums" inputMode="numeric" placeholder="0001201" autoComplete="off" autoFocus={autoFocus && i === 0} />
-          <input name={`to_${p}`} value={rows[p].to} onChange={(e) => update(p, "to", e.target.value)}
+          <input name={`to_${p}`} value={rows[p].to} onChange={(e) => update(p, "to", e.target.value)} onBlur={() => pad(p, "to")}
             className="input font-mono tabular-nums" inputMode="numeric" placeholder="0001250" autoComplete="off" />
           <input name={`qty_${p}`} value={rows[p].qty} onChange={(e) => update(p, "qty", e.target.value)}
             className="input text-right tabular-nums" inputMode="numeric" placeholder="1" autoComplete="off" />
@@ -74,7 +82,7 @@ export function TalonRangeFields({ autoFocus = false }: { autoFocus?: boolean })
           </p>
         </div>
       )}
-      <p className="text-xs text-gray-500">AA = 20 000₮ · AB = 50 000₮ · AC = 10 000₮. Ганц талон бол зөвхөн эхний сериалыг бичнэ. Тоо ширхэг бичвэл сүүлийн сериал өөрөө бодогдоно.</p>
+      <p className="text-xs text-gray-500">AA = 20 000₮ · AB = 50 000₮ · AC = 10 000₮. Дугаарыг 225 гэж бичвэл 0000225 болж нөхөгдөнө. Ганц талон бол зөвхөн эхний сериалыг бичнэ. Тоо ширхэг бичвэл сүүлийн сериал өөрөө бодогдоно.</p>
     </div>
   );
 }
