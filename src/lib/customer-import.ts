@@ -4,7 +4,8 @@
  * Мөр бүрээс регистрийг хэлбэрээр нь танина:
  *   - 7 оронтой тоо                 → байгууллагын регистр (жнь 2026813)
  *   - 2 үсэг + 8 оронтой тоо        → хүний регистр (жнь УУ89021223)
- * Регистрийг (ба түүний хажуугийн зураас/зай) хассан үлдсэн хэсэг нь нэр.
+ * Регистрийг (ба түүний хажуугийн зураас/зай) хассан үлдсэн хэсэг нь нэр. Регистр заавал биш.
+ * Том/жижиг үсэг, зай, зураасаар л ялгаатай нэрс ("эс ти юу", "Эс-Ти-Юу") нэг харилцагч.
  * Тиймээс "УУ89021223-ЧАНДМАНЬ БАТЦОГТ", "2026813 - Тэс-Ойл ХХК" аль аль нь зөв задарна,
  * нэр доторх зураас ("Тэс-Ойл") хадгалагдана.
  *
@@ -14,9 +15,9 @@
 
 export const MAX_IMPORT = 2000;
 
-export type ImportRow = { line: number; name: string; register: string; kind: "org" | "person"; phone: string | null; note: string | null };
+export type ImportRow = { line: number; name: string; register: string | null; kind: "org" | "person" | null; phone: string | null; note: string | null };
 /** Давхар мөр: аль мөр, ямар регистр, аль мөртэй давхцсан */
-export type DuplicateRow = { line: number; name: string; register: string; firstLine: number; firstName: string };
+export type DuplicateRow = { line: number; name: string; register: string | null; firstLine: number; firstName: string };
 export type ImportResult = { rows: ImportRow[]; errors: { line: number; text: string; message: string }[]; duplicates: DuplicateRow[] };
 
 const L = "А-ЯЁӨҮа-яёөүA-Za-z";
@@ -27,6 +28,9 @@ const HAS_REGISTER = new RegExp(REGISTER_SRC);
 
 /** Регистрийг харьцуулахад: хоосон зай, жижиг/том үсгийн ялгааг арилгана */
 export const registerKey = (r: string) => r.replace(/\s+/g, "").toUpperCase();
+
+/** Нэрийг харьцуулахад: том/жижиг үсэг, зай, зураасыг үл тооцно ("Эс-Ти Юу" = "эстиюу") */
+export const nameKey = (n: string) => n.toLowerCase().replace(/[\s\-–—_]+/g, "");
 
 // Хуулийн этгээдийн товчлолыг томоор нь үлдээнэ
 const ABBR = new Set(["ХХК", "ХК", "ТӨХК", "ТӨҮГ", "ОНӨҮГ", "ХЗХ", "ББСБ", "ТББ", "НҮТББ", "ҮЦК", "ЗГ", "ЛЛС", "LLC", "ХШХ", "АН", "СӨХ"]);
@@ -45,9 +49,9 @@ export function titleCase(name: string): string {
 }
 
 /** Нэг мөрийн текстээс регистр, нэрийг салгана */
-export function splitRegisterName(text: string): { register: string; kind: "org" | "person"; name: string } | null {
+export function splitRegisterName(text: string): { register: string | null; kind: "org" | "person" | null; name: string } {
   const matches = [...text.matchAll(REGISTER)];
-  if (!matches.length) return null;
+  if (!matches.length) return { register: null, kind: null, name: titleCase(cleanEdges(text)) };
   const m = matches[0];
   const register = m[3] ?? `${m[1].toUpperCase()}${m[2]}`;
   const key = registerKey(register);
@@ -57,9 +61,11 @@ export function splitRegisterName(text: string): { register: string; kind: "org"
     rest = rest.slice(0, x.index) + " " + rest.slice(x.index! + x[0].length);
   }
   // Регистрийн хажууд үлдсэн салгагч зураас, зай, цэг, таслалыг цэвэрлэнэ (нэр доторх зураас үлдэнэ)
-  rest = rest.replace(/\s+-\s+|\s+-|-\s+/g, " ").replace(/^[\s\-–—,.;:|/]+|[\s\-–—,.;:|/]+$/g, "");
-  return { register, kind: m[3] ? "org" : "person", name: titleCase(rest) };
+  rest = rest.replace(/\s+-\s+|\s+-|-\s+/g, " ");
+  return { register, kind: m[3] ? "org" : "person", name: titleCase(cleanEdges(rest)) };
 }
+
+const cleanEdges = (s: string) => s.replace(/^[\s\-–—,.;:|/]+|[\s\-–—,.;:|/]+$/g, "");
 
 const HEADER = /нэр|name|регистр|register/i;
 
@@ -68,7 +74,8 @@ export function parseCustomerPaste(text: string): ImportResult {
   const rows: ImportRow[] = [];
   const errors: ImportResult["errors"] = [];
   const duplicates: DuplicateRow[] = [];
-  const seen = new Map<string, ImportRow>();
+  const byReg = new Map<string, ImportRow>();
+  const byName = new Map<string, ImportRow>();
 
   lines.forEach((raw, i) => {
     const line = i + 1;
@@ -81,11 +88,21 @@ export function parseCustomerPaste(text: string): ImportResult {
     // Хоёр баганад ижил текст байвал нэгийг нь авна
     const same = c0.replace(/\s+/g, " ").toUpperCase() === c1.replace(/\s+/g, " ").toUpperCase();
     const parsed = splitRegisterName(c1 && !same ? `${c0} - ${c1}` : c0 || c1);
-    if (!parsed) return errors.push({ line, text: shown, message: "регистр олдсонгүй (7 оронтой тоо эсвэл 2 үсэг + 8 оронтой тоо)" });
-    if (!parsed.name) return errors.push({ line, text: shown, message: "нэр хоосон" });
-    const key = registerKey(parsed.register);
-    const first = seen.get(key);
-    if (first) return duplicates.push({ line, name: parsed.name, register: parsed.register, firstLine: first.line, firstName: first.name });
+    if (!parsed.name) return errors.push({ line, text: shown, message: "нэр хоосон (зөвхөн регистр байна)" });
+    const nk = nameKey(parsed.name);
+    // Ижил регистр, эсвэл ижил нэр (аль нэг нь регистргүй бол) → нэг харилцагч
+    const sameReg = parsed.register ? byReg.get(registerKey(parsed.register)) : undefined;
+    const sameName = byName.get(nk);
+    const first = sameReg ?? (sameName && (!parsed.register || !sameName.register) ? sameName : undefined);
+    if (first) {
+      // Эхнийх нь регистргүй байсан бол энэ мөрийн регистрийг нөхнө
+      if (!first.register && parsed.register) {
+        first.register = parsed.register;
+        first.kind = parsed.kind;
+        byReg.set(registerKey(parsed.register), first);
+      }
+      return duplicates.push({ line, name: parsed.name, register: parsed.register, firstLine: first.line, firstName: first.name });
+    }
     const row: ImportRow = {
       line,
       name: parsed.name.slice(0, 200),
@@ -94,7 +111,8 @@ export function parseCustomerPaste(text: string): ImportResult {
       phone: phone.slice(0, 50) || null,
       note: rest.filter(Boolean).join(" ").slice(0, 500) || null,
     };
-    seen.set(key, row);
+    if (row.register) byReg.set(registerKey(row.register), row);
+    if (!byName.has(nk)) byName.set(nk, row);
     rows.push(row);
   });
   return { rows, errors, duplicates };

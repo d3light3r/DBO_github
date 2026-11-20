@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { describeRanges, parseTalonForm, talonDbError } from "@/lib/talon";
 import { talonRpc } from "@/lib/talon-db";
 import { todayUB } from "@/lib/time";
-import { MAX_IMPORT, parseCustomerPaste, registerKey } from "@/lib/customer-import";
+import { MAX_IMPORT, nameKey, parseCustomerPaste, registerKey } from "@/lib/customer-import";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -42,19 +42,29 @@ export async function importCustomers(_p: FormState, f: FormData): Promise<FormS
   const me = await requireStaffAdmin();
   // Алдаатай (регистр/нэр олдоогүй) мөрийг алгасаж, зөвийг нь импортлоно
   const { rows, errors } = parseCustomerPaste(String(f.get("data") ?? ""));
-  if (!rows.length) return { ok: false, message: "Импортлох мөр алга. Мөр бүрт регистр (7 оронтой тоо эсвэл 2 үсэг + 8 оронтой тоо) ба нэр байх ёстой." };
+  if (!rows.length) return { ok: false, message: "Импортлох мөр алга. Мөр бүрт харилцагчийн нэр байх ёстой." };
   if (rows.length > MAX_IMPORT) return { ok: false, message: `Нэг удаад ${MAX_IMPORT} хүртэл мөр импортлоно.` };
 
-  // Аль хэдийн бүртгэлтэй регистрийг алгасна
+  // Системд аль хэдийн байгаа харилцагчийг алгасна: ижил регистр, эсвэл ижил нэр (аль нэг нь регистргүй бол)
   const db = createAdminClient();
-  const existing = new Set<string>();
-  const regs = [...new Set(rows.flatMap((r) => [r.register, registerKey(r.register)]))];
-  for (let i = 0; i < regs.length; i += 200) {
-    const { data, error } = await db.from("customers").select("register").eq("organization_id", me.organization_id).in("register", regs.slice(i, i + 200));
+  const regKeys = new Set<string>();
+  const names = new Map<string, boolean>(); // nameKey -> регистртэй эсэх
+  for (let off = 0; ; off += 1000) {
+    const { data, error } = await db.from("customers").select("name, register").eq("organization_id", me.organization_id).order("id").range(off, off + 999);
     if (error) return { ok: false, message: error.message };
-    data?.forEach((c) => c.register && existing.add(registerKey(c.register)));
+    for (const c of data ?? []) {
+      if (c.register) regKeys.add(registerKey(c.register));
+      const k = nameKey(c.name);
+      names.set(k, (names.get(k) ?? false) || !!c.register);
+    }
+    if (!data || data.length < 1000) break;
   }
-  const fresh = rows.filter((r) => !existing.has(registerKey(r.register)));
+  const fresh = rows.filter((r) => {
+    if (r.register && regKeys.has(registerKey(r.register))) return false;
+    const k = nameKey(r.name);
+    if (names.has(k) && (!r.register || !names.get(k))) return false;
+    return true;
+  });
   if (fresh.length) {
     const { error } = await db.from("customers").insert(
       fresh.map((r) => ({ organization_id: me.organization_id, name: r.name, register: r.register, phone: r.phone, note: r.note })),
@@ -65,7 +75,7 @@ export async function importCustomers(_p: FormState, f: FormData): Promise<FormS
   const skipped = rows.length - fresh.length;
   return {
     ok: true,
-    message: `${fresh.length} харилцагч нэмэгдлээ.${skipped ? ` ${skipped} нь аль хэдийн бүртгэлтэй (регистрээр) тул алгаслаа.` : ""}${errors.length ? ` ${errors.length} алдаатай мөр алгасагдлаа.` : ""}`,
+    message: `${fresh.length} харилцагч нэмэгдлээ.${skipped ? ` ${skipped} нь аль хэдийн бүртгэлтэй (регистр эсвэл нэрээр) тул алгаслаа.` : ""}${errors.length ? ` ${errors.length} алдаатай мөр алгасагдлаа.` : ""}`,
   };
 }
 

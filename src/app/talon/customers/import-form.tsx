@@ -18,9 +18,9 @@ export function ImportForm() {
     <form action={action} className="card h-fit space-y-3">
       <h2 className="font-semibold">Excel-ээс импортлох</h2>
       <p className="text-xs text-gray-500">
-        Excel-ээс хуулаад (Ctrl+C) энд буулгана (Ctrl+V). Нэг нүдэнд <b>«2026813-Тэс Ойл ХХК»</b>, <b>«УУ89021223-Чандмань Батцогт»</b> гэж байсан ч,
-        нэр, регистр тусдаа баганад байсан ч танина. 7 оронтой тоо = байгууллага, 2 үсэг + 8 оронтой тоо = хүний регистр, үлдсэн нь нэр.
-        3 дахь багана утас, 4 дэх тэмдэглэл (заавал биш).
+        Excel-ээс хуулаад (Ctrl+C) энд буулгана (Ctrl+V). <b>«2026813-Тэс Ойл ХХК»</b>, <b>«УУ89021223-Чандмань Батцогт»</b>, зөвхөн нэр <b>«Эс Ти Юу»</b> — аль нь ч болно.
+        7 оронтой тоо = байгууллага, 2 үсэг + 8 оронтой тоо = хүний регистр (заавал биш), үлдсэн нь нэр.
+        Том/жижиг үсэг, зай, зураасаар л ялгаатай нэрийг («эс ти юу», «Эс-Ти-Юу») нэг харилцагч гэж үзнэ.
       </p>
       <textarea
         name="data"
@@ -35,7 +35,7 @@ export function ImportForm() {
         <div className="space-y-2 text-xs">
           <p>
             <b className="text-emerald-700">{parsed.rows.length} мөр бэлэн</b>
-            {parsed.duplicates.length > 0 && <span className="text-gray-500"> · {parsed.duplicates.length} давхар регистр алгасна</span>}
+            {parsed.duplicates.length > 0 && <span className="text-gray-500"> · {parsed.duplicates.length} давхардсан алгасна</span>}
             {parsed.errors.length > 0 && <span className="text-brand"> · {parsed.errors.length} алдаатай</span>}
           </p>
           {parsed.errors.length > 0 && (
@@ -55,7 +55,7 @@ export function ImportForm() {
           )}
           {parsed.duplicates.length > 0 && (
             <details className="rounded-lg bg-amber-50 px-3 py-2 text-amber-900">
-              <summary className="cursor-pointer font-medium">Давхар регистртэй {parsed.duplicates.length} мөр (алгасна) — харах</summary>
+              <summary className="cursor-pointer font-medium">Давхардсан {parsed.duplicates.length} мөр (нэг харилцагч, алгасна) — харах</summary>
               <div className="mt-2 max-h-48 overflow-auto">
                 <table className="table">
                   <thead><tr><th>Мөр</th><th>Регистр</th><th>Нэр</th><th>Давхцсан мөр</th></tr></thead>
@@ -63,7 +63,7 @@ export function ImportForm() {
                     {parsed.duplicates.map((d) => (
                       <tr key={d.line}>
                         <td>{d.line}</td>
-                        <td className="font-mono">{d.register}</td>
+                        <td className="font-mono">{d.register ?? "—"}</td>
                         <td>{d.name}</td>
                         <td>{d.firstLine}-р мөр{d.firstName !== d.name && <span className="block text-[11px] text-amber-700">{d.firstName}</span>}</td>
                       </tr>
@@ -82,7 +82,7 @@ export function ImportForm() {
                   {parsed.rows.slice(0, 50).map((r) => (
                     <tr key={r.line}>
                       <td>{r.name}</td>
-                      <td className="whitespace-nowrap font-mono">{r.register} <span className="font-sans text-[10px] text-gray-400">{r.kind === "org" ? "ААН" : "хүн"}</span></td>
+                      <td className="whitespace-nowrap font-mono">{r.register ?? <span className="text-gray-400">—</span>} {r.kind && <span className="font-sans text-[10px] text-gray-400">{r.kind === "org" ? "ААН" : "хүн"}</span>}</td>
                       <td>{r.phone ?? "—"}</td>
                       <td>{r.note ?? "—"}</td>
                     </tr>
