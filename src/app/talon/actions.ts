@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { describeRanges, parseTalonForm, talonDbError } from "@/lib/talon";
 import { talonRpc } from "@/lib/talon-db";
 import { todayUB } from "@/lib/time";
+import { MAX_IMPORT, parseCustomerPaste, registerKey } from "@/lib/customer-import";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -34,6 +35,38 @@ export async function saveCustomer(_p: FormState, f: FormData): Promise<FormStat
   revalidatePath("/talon/customers");
   if (id) redirect("/talon/customers");
   return { ok: true, message: `${row.name} нэмэгдлээ.` };
+}
+
+// ---------------- Харилцагч импортлох (Excel-ээс хуулж буулгах) ----------------
+export async function importCustomers(_p: FormState, f: FormData): Promise<FormState> {
+  const me = await requireStaffAdmin();
+  // Алдаатай (регистр/нэр олдоогүй) мөрийг алгасаж, зөвийг нь импортлоно
+  const { rows, errors } = parseCustomerPaste(String(f.get("data") ?? ""));
+  if (!rows.length) return { ok: false, message: "Импортлох мөр алга. Мөр бүрт регистр (7 оронтой тоо эсвэл 2 үсэг + 8 оронтой тоо) ба нэр байх ёстой." };
+  if (rows.length > MAX_IMPORT) return { ok: false, message: `Нэг удаад ${MAX_IMPORT} хүртэл мөр импортлоно.` };
+
+  // Аль хэдийн бүртгэлтэй регистрийг алгасна
+  const db = createAdminClient();
+  const existing = new Set<string>();
+  const regs = [...new Set(rows.flatMap((r) => [r.register, registerKey(r.register)]))];
+  for (let i = 0; i < regs.length; i += 200) {
+    const { data, error } = await db.from("customers").select("register").eq("organization_id", me.organization_id).in("register", regs.slice(i, i + 200));
+    if (error) return { ok: false, message: error.message };
+    data?.forEach((c) => c.register && existing.add(registerKey(c.register)));
+  }
+  const fresh = rows.filter((r) => !existing.has(registerKey(r.register)));
+  if (fresh.length) {
+    const { error } = await db.from("customers").insert(
+      fresh.map((r) => ({ organization_id: me.organization_id, name: r.name, register: r.register, phone: r.phone, note: r.note })),
+    );
+    if (error) return { ok: false, message: error.message };
+  }
+  revalidatePath("/talon", "layout");
+  const skipped = rows.length - fresh.length;
+  return {
+    ok: true,
+    message: `${fresh.length} харилцагч нэмэгдлээ.${skipped ? ` ${skipped} нь аль хэдийн бүртгэлтэй (регистрээр) тул алгаслаа.` : ""}${errors.length ? ` ${errors.length} алдаатай мөр алгасагдлаа.` : ""}`,
+  };
 }
 
 // ---------------- Талон зарах ----------------

@@ -2,6 +2,7 @@ import { requireStaffAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtMoney } from "@/lib/talon";
 import { CustomerForm, type Customer } from "./customer-form";
+import { ImportForm } from "./import-form";
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ edit?: string; q?: string }> }) {
   const me = await requireStaffAdmin();
@@ -56,7 +57,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
             </table>
           </div>
         </div>
-        <CustomerForm key={editing?.id ?? "new"} customer={editing} />
+        <div className="space-y-6">
+          <CustomerForm key={editing?.id ?? "new"} customer={editing} />
+          {!editing && <ImportForm />}
+        </div>
       </div>
     </div>
   );
