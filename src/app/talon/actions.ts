@@ -8,6 +8,7 @@ import { describeRanges, parseTalonForm, talonDbError } from "@/lib/talon";
 import { talonRpc } from "@/lib/talon-db";
 import { todayUB } from "@/lib/time";
 import { MAX_IMPORT, nameKey, parseCustomerPaste, registerKey } from "@/lib/customer-import";
+import { customerMatcher, MAX_TALON_IMPORT, newCustomerKey, parseTalonPaste, type CustomerRef } from "@/lib/talon-import";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -76,6 +77,76 @@ export async function importCustomers(_p: FormState, f: FormData): Promise<FormS
   return {
     ok: true,
     message: `${fresh.length} харилцагч нэмэгдлээ.${skipped ? ` ${skipped} нь аль хэдийн бүртгэлтэй (регистр эсвэл нэрээр) тул алгаслаа.` : ""}${errors.length ? ` ${errors.length} алдаатай мөр алгасагдлаа.` : ""}`,
+  };
+}
+
+// ---------------- Зарагдсан талон импортлох (Excel-ээс хуулж буулгах) ----------------
+export async function importTalons(_p: FormState, f: FormData): Promise<FormState> {
+  const me = await requireStaffAdmin();
+  const org = me.organization_id;
+  const today = todayUB();
+  const defaultDate = isDate(s(f, "sold_date")) ? s(f, "sold_date") : today;
+  const createMissing = f.get("create_missing") === "on";
+  const { rows, errors, duplicates } = parseTalonPaste(String(f.get("data") ?? ""));
+
+  // Мөнгөн бүртгэл тул алдаатай, давхар мөртэй бол юу ч оруулахгүй
+  if (errors.length) return { ok: false, message: `Алдаатай ${errors.length} мөр байна (${errors.slice(0, 5).map((e) => `${e.line}-р мөр`).join(", ")}${errors.length > 5 ? " ..." : ""}). Засаад дахин буулгана уу.` };
+  if (duplicates.length) return { ok: false, message: `Нэг сериал давхар орсон ${duplicates.length} мөр байна (${duplicates.slice(0, 5).map((d) => `${d.line}-р мөр ${d.serial}`).join(", ")}). Засаад дахин буулгана уу.` };
+  if (!rows.length) return { ok: false, message: "Импортлох мөр алга." };
+  if (rows.length > MAX_TALON_IMPORT) return { ok: false, message: `Нэг удаад ${MAX_TALON_IMPORT} хүртэл талон импортлоно.` };
+  const future = rows.find((r) => (r.date ?? defaultDate) > today);
+  if (future) return { ok: false, message: `${future.line}-р мөр: ирээдүйн огноогоор бүртгэх боломжгүй.` };
+
+  const db = createAdminClient();
+  // Харилцагчдыг таних
+  const customers: CustomerRef[] = [];
+  for (let off = 0; ; off += 1000) {
+    const { data, error } = await db.from("customers").select("id, name, register").eq("organization_id", org).order("id").range(off, off + 999);
+    if (error) return { ok: false, message: error.message };
+    customers.push(...((data ?? []) as CustomerRef[]));
+    if (!data || data.length < 1000) break;
+  }
+  const find = customerMatcher(customers);
+  const missing = new Map<string, { name: string; register: string | null }>();
+  for (const r of rows) {
+    if (!find(r.customerName, r.customerRegister)) missing.set(newCustomerKey(r.customerName, r.customerRegister), { name: r.customerName, register: r.customerRegister });
+  }
+
+  // Системд аль хэдийн байгаа сериал
+  const serials = rows.map((r) => r.serial);
+  const taken: string[] = [];
+  for (let i = 0; i < serials.length; i += 300) {
+    const { data, error } = await db.from("talons").select("serial").eq("organization_id", org).in("serial", serials.slice(i, i + 300));
+    if (error) return { ok: false, message: error.message };
+    taken.push(...(data ?? []).map((t) => t.serial as string));
+  }
+  if (taken.length) return { ok: false, message: `${taken.length} талон аль хэдийн зарагдсан бүртгэлтэй: ${taken.sort().slice(0, 10).join(", ")}${taken.length > 10 ? " ..." : ""}. Тэдгээр мөрийг хасаад дахин оруулна уу.` };
+
+  if (missing.size) {
+    if (!createMissing) {
+      const names = [...missing.values()].map((m) => m.name || m.register);
+      return { ok: false, message: `${missing.size} харилцагч бүртгэлгүй байна: ${names.slice(0, 10).join(", ")}${names.length > 10 ? " ..." : ""}. «Олдоогүй харилцагчийг шинээр үүсгэх»-ийг чагтлах эсвэл эхлээд Харилцагч хэсэгт нэмнэ үү.` };
+    }
+    const { data, error } = await db
+      .from("customers")
+      .insert([...missing.values()].map((m) => ({ organization_id: org, name: m.name, register: m.register })))
+      .select("id, name, register");
+    if (error) return { ok: false, message: error.message };
+    customers.push(...((data ?? []) as CustomerRef[]));
+  }
+  const find2 = customerMatcher(customers);
+
+  // Бүгдийг нэг хүсэлтээр: аль нэг нь алдаатай бол бүгд буцна
+  const { error } = await db.from("talons").insert(
+    rows.map((r) => ({ organization_id: org, serial: r.serial, customer_id: find2(r.customerName, r.customerRegister)!.id, sold_date: r.date ?? defaultDate, sold_by: me.id })),
+  );
+  if (error) return { ok: false, message: error.message.includes("duplicate") ? "Зарим сериал энэ хооронд бүртгэгдсэн байна. Дахин оролдоно уу." : error.message };
+
+  revalidatePath("/talon", "layout");
+  const total = rows.reduce((t, r) => t + r.amount, 0);
+  return {
+    ok: true,
+    message: `${rows.length} талон зарагдсанаар бүртгэгдлээ, нийт ${new Intl.NumberFormat("en-US").format(total)}₮.${missing.size ? ` ${missing.size} шинэ харилцагч үүсгэлээ.` : ""}`,
   };
 }
 

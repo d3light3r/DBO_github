@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { customerLabel, fmtMoney, groupRuns } from "@/lib/talon";
 import { addDays, fmtDate, fmtDateTime, todayUB } from "@/lib/time";
 import { SellForm } from "../talon-forms";
+import { TalonImportForm } from "./talon-import-form";
 
 /** Идэвхтэй бүх харилцагч (Supabase нэг удаад 1000 мөр буцаадаг тул хуудаслаж авна) */
 async function loadCustomers(org: string) {
@@ -36,6 +37,7 @@ export default async function SellPage() {
   const runs = groupRuns(rows, (r) => r.sold_recorded_at).sort((a, b) => b.first.sold_recorded_at.localeCompare(a.first.sold_recorded_at));
 
   return (
+    <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-[400px_1fr]">
       <SellForm customers={customers} today={today} />
       <section className="card min-w-0">
@@ -62,6 +64,8 @@ export default async function SellPage() {
           </div>
         )}
       </section>
+    </div>
+      <TalonImportForm customers={customers} today={today} />
     </div>
   );
 }
