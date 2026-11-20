@@ -102,15 +102,18 @@ export function CloseShiftForm({
   nozzles,
   starts,
   tanks,
+  talonAmount = 0,
 }: {
   stationId: string;
   nozzles: NozzleView[];
   starts: Record<string, number>;
   tanks: TankView[];
+  /** Энэ ээлжинд "Талон" хэсгээс оруулсан талоны нийт дүн */
+  talonAmount?: number;
 }) {
   const [state, action, pending] = useActionState(closeShift, null);
   const [ends, setEnds] = useState<Record<string, string>>({});
-  const [pay, setPay] = useState({ pay_cash: "", pay_card: "", pay_coupon: "", pay_credit: "" });
+  const [pay, setPay] = useState({ pay_cash: "", pay_card: "", pay_coupon: talonAmount ? String(talonAmount) : "", pay_credit: "" });
 
   const rows = nozzles
     .filter((n) => starts[n.id] != null)
@@ -173,7 +176,14 @@ export function CloseShiftForm({
           ] as const
         ).map(([k, label]) => (
           <label key={k} className="grid grid-cols-[1fr_9rem] items-center gap-2 text-sm">
-            <span>{label}</span>
+            <span>
+              {label}
+              {k === "pay_coupon" && talonAmount > 0 && (
+                <span className={`block text-[11px] ${parse(pay.pay_coupon) === talonAmount ? "text-gray-400" : "text-amber-600"}`}>
+                  Бүртгэсэн талон: {fmtMoney(talonAmount)}
+                </span>
+              )}
+            </span>
             <NumInput name={k} value={pay[k]} onChange={(e) => setPay({ ...pay, [k]: e.target.value })} placeholder="0" />
           </label>
         ))}

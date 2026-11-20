@@ -8,6 +8,7 @@ export function StationTabs({ id, isAdmin }: { id: string; isAdmin: boolean }) {
   const base = `/station/${id}`;
   const tabs = [
     { href: base, label: "🕒 Ээлж", active: path === base },
+    { href: `${base}/talons`, label: "🎫 Талон", active: path.startsWith(`${base}/talons`) },
     { href: `${base}/report`, label: "📊 Тайлан", active: path.startsWith(`${base}/report`) || path.startsWith(`${base}/shift`) },
     ...(isAdmin ? [{ href: `${base}/settings`, label: "⚙️ Тохиргоо", active: path.startsWith(`${base}/settings`) }] : []),
   ];

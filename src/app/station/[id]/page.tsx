@@ -28,12 +28,15 @@ export default async function StationShiftPage({ params }: { params: Promise<{ i
   let starts: Record<string, number> = {};
   let receipts: FuelReceipt[] = [];
   let openerName = "";
+  let talonAmount = 0;
   if (open) {
-    const [{ data: rs }, { data: rc }, { data: opener }] = await Promise.all([
+    const [{ data: rs }, { data: rc }, { data: opener }, { data: tl }] = await Promise.all([
       db.from("shift_readings").select("*").eq("shift_id", open.id),
       db.from("fuel_receipts").select("*").eq("shift_id", open.id).order("received_at"),
       db.from("employees").select("full_name").eq("id", open.opened_by).maybeSingle(),
+      db.rpc("talon_station_totals", { p_unit: station.id, p_shift: open.id }).maybeSingle<{ shift_amount: number }>(),
     ]);
+    talonAmount = Number(tl?.shift_amount ?? 0);
     starts = Object.fromEntries(((rs ?? []) as ShiftReading[]).map((r) => [r.nozzle_id, Number(r.start_reading)]));
     receipts = (rc ?? []) as FuelReceipt[];
     openerName = opener?.full_name ?? "";
@@ -80,7 +83,7 @@ export default async function StationShiftPage({ params }: { params: Promise<{ i
               </ul>
             )}
           </section>
-          <CloseShiftForm stationId={station.id} nozzles={nozzleViews} starts={starts} tanks={tankViews} />
+          <CloseShiftForm stationId={station.id} nozzles={nozzleViews} starts={starts} tanks={tankViews} talonAmount={talonAmount} />
         </>
       ) : (
         <OpenShiftForm stationId={station.id} nozzles={nozzleViews} lastEnd={lastEnd} handoverExpected={Number(lastClosed?.handover_cash ?? 0)} />
