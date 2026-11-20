@@ -11,7 +11,7 @@
 
 ## Суулгах
 
-1. Supabase төсөл дээр **SQL Editor** нээж `supabase/migrations/` доторх файлуудыг дугаарын дарааллаар (0001 → 0006) бүхэлд нь ажиллуулна.
+1. Supabase төсөл дээр **SQL Editor** нээж `supabase/migrations/` доторх файлуудыг дугаарын дарааллаар (0001 → 0007) бүхэлд нь ажиллуулна.
 2. `.env.example`-ийг `.env.local` нэрээр хуулж, Supabase **Project Settings → API**-аас утгуудыг бөглөнө. `SUPABASE_SERVICE_ROLE_KEY` нууц тул хэнд ч бүү өг.
 3. ```bash
    npm install

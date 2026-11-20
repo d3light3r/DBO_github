@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireStaffAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fmtMoney, parseRange, talonDbError } from "@/lib/talon";
+import { describeRanges, parseTalonForm, talonDbError } from "@/lib/talon";
+import { talonRpc } from "@/lib/talon-db";
 import { todayUB } from "@/lib/time";
 
 export type FormState = { ok: boolean; message: string } | null;
@@ -38,16 +39,14 @@ export async function saveCustomer(_p: FormState, f: FormData): Promise<FormStat
 // ---------------- Талон зарах ----------------
 export async function sellTalons(_p: FormState, f: FormData): Promise<FormState> {
   const me = await requireStaffAdmin();
-  const range = parseRange(s(f, "from"), s(f, "to"));
-  if ("error" in range) return { ok: false, message: range.error };
+  const parsed = parseTalonForm((k) => s(f, k));
+  if ("error" in parsed) return { ok: false, message: parsed.error };
   const customer = s(f, "customer_id");
   if (!customer) return { ok: false, message: "Харилцагч сонгоно уу." };
   const soldDate = isDate(s(f, "sold_date")) ? s(f, "sold_date") : todayUB();
 
-  const { data, error } = await createAdminClient().rpc("talon_sell", {
+  const { data, error } = await talonRpc("sell", parsed.ranges, {
     p_org: me.organization_id,
-    p_from: range.from,
-    p_to: range.to,
     p_customer: customer,
     p_sold_date: soldDate,
     p_by: me.id,
@@ -56,7 +55,7 @@ export async function sellTalons(_p: FormState, f: FormData): Promise<FormState>
   revalidatePath("/talon", "layout");
   return {
     ok: true,
-    message: `${data} ширхэг ${fmtMoney(range.amount)}-ийн талон (${range.from}${range.count > 1 ? ` – ${range.to}` : ""}) зарагдсанаар бүртгэгдлээ. Нийт ${fmtMoney(range.total)}.`,
+    message: `${data} талон зарагдсанаар бүртгэгдлээ: ${describeRanges(parsed.ranges)}`,
   };
 }
 
@@ -82,13 +81,11 @@ export async function saveTalonSettings(_p: FormState, f: FormData): Promise<For
 // ---------------- Алдаа засах (зөвхөн админ) ----------------
 export async function undoTalons(_p: FormState, f: FormData): Promise<FormState> {
   const me = await requireAdmin();
-  const range = parseRange(s(f, "from"), s(f, "to"));
-  if ("error" in range) return { ok: false, message: range.error };
+  const parsed = parseTalonForm((k) => s(f, k));
+  if ("error" in parsed) return { ok: false, message: parsed.error };
   const mode = s(f, "mode") === "sale" ? "sale" : "redeem";
-  const { data, error } = await createAdminClient().rpc("talon_undo", {
+  const { data, error } = await talonRpc("undo", parsed.ranges, {
     p_org: me.organization_id,
-    p_from: range.from,
-    p_to: range.to,
     p_mode: mode,
   });
   if (error) return { ok: false, message: talonDbError(error) };

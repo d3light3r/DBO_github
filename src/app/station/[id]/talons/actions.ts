@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { DEVICE_MESSAGES, deviceState } from "@/lib/device";
 import { stationContext } from "@/lib/station-access";
-import { fmtMoney, parseRange, talonDbError } from "@/lib/talon";
+import { describeRanges, parseTalonForm, talonDbError } from "@/lib/talon";
+import { talonRpc } from "@/lib/talon-db";
 import { todayUB } from "@/lib/time";
 
 export type RedeemState = { ok: boolean; message: string } | null;
@@ -21,15 +21,13 @@ export async function redeemTalons(_p: RedeemState, f: FormData): Promise<Redeem
   const dev = await deviceState(emp);
   if (dev.kind !== "approved" && dev.kind !== "not_required") return { ok: false, message: DEVICE_MESSAGES[dev.kind] };
 
-  const range = parseRange(String(f.get("from") ?? ""), String(f.get("to") ?? ""));
-  if ("error" in range) return { ok: false, message: range.error };
+  const parsed = parseTalonForm((k) => String(f.get(k) ?? ""));
+  if ("error" in parsed) return { ok: false, message: parsed.error };
   const raw = String(f.get("date") ?? "");
   const date = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : todayUB();
 
-  const { data, error } = await createAdminClient().rpc("talon_redeem", {
+  const { data, error } = await talonRpc("redeem", parsed.ranges, {
     p_org: emp.organization_id,
-    p_from: range.from,
-    p_to: range.to,
     p_branch: stationId,
     p_by: emp.id,
     p_date: date,
@@ -39,6 +37,6 @@ export async function redeemTalons(_p: RedeemState, f: FormData): Promise<Redeem
   revalidatePath("/talon", "layout");
   return {
     ok: true,
-    message: `${data} ширхэг ${fmtMoney(range.amount)}-ийн талон оруулагдлаа (${range.from}${range.count > 1 ? ` – ${range.to}` : ""}). Нийт ${fmtMoney(range.total)}.`,
+    message: `${data} талон оруулагдлаа: ${describeRanges(parsed.ranges)}`,
   };
 }

@@ -65,6 +65,52 @@ export function parseRange(fromRaw: string, toRaw = ""): TalonRange | { error: s
   return { from, to, prefix: m[1] as TalonPrefix, count, amount, total: amount * count };
 }
 
+/** Маягтын мөрийн дараалал: AA, AB, AC */
+export const FORM_PREFIXES = ["AA", "AB", "AC"] as const;
+
+/**
+ * Нэг төрлийн мөр: эхний дугаар (7 орон хүртэл), сүүлийн дугаар эсвэл тоо ширхэг.
+ * Сүүлийн дугаар ба тоо хоёулаа хоосон бол ганц талон.
+ */
+export function parseTalonRow(prefix: string, fromNum: string, toNum: string, qtyRaw: string): TalonRange | { error: string } | null {
+  const a = fromNum.replace(/\D/g, "");
+  const b = toNum.replace(/\D/g, "");
+  const q = qtyRaw.replace(/\D/g, "");
+  if (!a && !b && !q) return null;
+  if (!a || a.length > 7) return { error: `${prefix}: эхний дугаар 7 хүртэл оронтой тоо байна.` };
+  if (b.length > 7) return { error: `${prefix}: сүүлийн дугаар 7 хүртэл оронтой тоо байна.` };
+  const start = Number(a);
+  let end = b ? Number(b) : start;
+  if (q) {
+    const qty = Number(q);
+    if (qty < 1) return { error: `${prefix}: тоо ширхэг 1-ээс бага байж болохгүй.` };
+    if (b && Number(b) - start + 1 !== qty) return { error: `${prefix}: сүүлийн дугаар ба тоо ширхэг таарахгүй байна.` };
+    end = start + qty - 1;
+    if (end > 9999999) return { error: `${prefix}: сериал 9999999-өөс хэтэрнэ.` };
+  }
+  const r = parseRange(fmtSerial(prefix, start), fmtSerial(prefix, end));
+  return "error" in r ? { error: `${prefix}: ${r.error}` } : r;
+}
+
+/** Маягтаас AA/AB/AC мөрүүдийг уншина (from_AA, to_AA, qty_AA ...). Дор хаяж нэг мөр шаардана. */
+export function parseTalonForm(get: (k: string) => string): { ranges: TalonRange[] } | { error: string } {
+  const ranges: TalonRange[] = [];
+  for (const p of FORM_PREFIXES) {
+    const r = parseTalonRow(p, get(`from_${p}`), get(`to_${p}`), get(`qty_${p}`));
+    if (r && "error" in r) return r;
+    if (r) ranges.push(r);
+  }
+  if (!ranges.length) return { error: "Дор хаяж нэг мөрөнд сериалын дугаар оруулна уу." };
+  return { ranges };
+}
+
+export function describeRanges(ranges: TalonRange[]): string {
+  const parts = ranges.map((r) => `${r.from}${r.count > 1 ? ` – ${r.to}` : ""} (${r.count} ш)`);
+  const total = ranges.reduce((t, r) => t + r.total, 0);
+  const cnt = ranges.reduce((t, r) => t + r.count, 0);
+  return `${parts.join(", ")}. Нийт ${cnt} ширхэг, ${new Intl.NumberFormat("en-US").format(total)}₮.`;
+}
+
 /** Дараалсан сериалуудыг (ижил key-тэй) "AA0000001 – AA0000050" хэлбэрийн мужид нэгтгэнэ */
 export function groupRuns<T extends { serial: string }>(rows: T[], key: (r: T) => string) {
   const sorted = [...rows].sort((a, b) => (key(a) + a.serial).localeCompare(key(b) + b.serial));
