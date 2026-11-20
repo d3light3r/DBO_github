@@ -211,3 +211,15 @@ export async function undoTalons(_p: FormState, f: FormData): Promise<FormState>
     message: mode === "sale" ? `${data} талоны борлуулалтыг устгалаа.` : `${data} талоны оруулалтыг цуцаллаа (дахин оруулах боломжтой).`,
   };
 }
+
+// ---------------- ШТС-д талон импорт түр нээх/хаах (зөвхөн админ) ----------------
+export async function setStationImport(f: FormData) {
+  const me = await requireAdmin();
+  const on = f.get("on") === "1";
+  const { error } = await createAdminClient()
+    .from("talon_settings")
+    .upsert({ organization_id: me.organization_id, station_import: on, updated_by: me.id, updated_at: new Date().toISOString() });
+  if (error) throw new Error(/station_import/.test(error.message) ? "Supabase дээр 0008_talon_station_import.sql-ийг ажиллуулна уу." : error.message);
+  revalidatePath("/talon", "layout");
+  revalidatePath("/station", "layout");
+}

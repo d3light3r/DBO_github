@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { customerLabel, fmtMoney, groupRuns } from "@/lib/talon";
 import { addDays, fmtDate, fmtDateTime, todayUB } from "@/lib/time";
 import { RedeemForm } from "./redeem-form";
+import { RedeemImportForm } from "./redeem-import-form";
 
 type Row = {
   serial: string;
@@ -31,6 +32,8 @@ export default async function StationTalons({ params }: { params: Promise<{ id: 
   ]);
   const { data: totalsRow } = await db.rpc("talon_station_totals", { p_unit: station.id, p_shift: open.data?.id ?? null }).maybeSingle<Totals>();
   const back = settings.data?.backdate_days ?? 0;
+  // Импорт түр нээлттэй эсэх (0008 ажиллаагүй бол багана байхгүй → хаалттай)
+  const { data: imp } = await db.from("talon_settings").select("station_import").eq("organization_id", emp.organization_id).maybeSingle();
   const rows = (recent.data ?? []) as unknown as Row[];
   // Нэг удаад бүртгэсэн дараалсан сериалуудыг нэг мөр болгоно
   const runs = groupRuns(rows, (r) => r.redeemed_recorded_at + r.redeemed_date).sort((a, b) =>
@@ -40,6 +43,7 @@ export default async function StationTalons({ params }: { params: Promise<{ id: 
   return (
     <>
       <RedeemForm stationId={station.id} today={today} minDate={addDays(today, -back)} />
+      {imp?.station_import && <RedeemImportForm stationId={station.id} stationName={station.name} today={today} />}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="card">
