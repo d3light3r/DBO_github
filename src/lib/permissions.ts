@@ -2,6 +2,7 @@
  * Апп доторх эрх. Ажилтан бүрт Тохиргоо → Апп эрх-ээс онооно.
  * employees.permissions = null бол албан тушаалын анхдагч эрх; админ үргэлж бүх эрхтэй.
  */
+import type { IconName } from "@/components/icons";
 import type { Role } from "./types";
 
 export const APPS = [
@@ -104,26 +105,26 @@ export function talonHome(emp: WithPerms): string | null {
   if (p.has("talon.list")) return "/talon";
   if (p.has("talon.sell")) return "/talon/sell";
   if (p.has("talon.customers")) return "/talon/customers";
-  if (p.has("talon.backdate") || p.has("talon.undo")) return "/talon/settings";
+  if (p.has("talon.backdate")) return "/talon/backdate";
+  if (p.has("talon.undo")) return "/talon/undo";
   return null;
 }
 
 /** Цаг бүртгэл апп-ын цэсүүд (хаяг, эрх) — табын дараалал */
-export const ATTENDANCE_TABS: { href: string; label: string; perm: Perm; mine?: boolean }[] = [
-  { href: "/app", label: "⏱ Нүүр", perm: "attendance.punch", mine: true },
-  { href: "/app/history", label: "📅 Түүх", perm: "attendance.punch", mine: true },
-  { href: "/app/requests", label: "📝 Хүсэлт", perm: "attendance.punch", mine: true },
-  { href: "/app/profile", label: "👤 Миний", perm: "attendance.punch", mine: true }, // профайл өөрөө хэнд ч нээлттэй
-  { href: "/app/dashboard", label: "📊 Самбар", perm: "attendance.dashboard" },
-  { href: "/app/attendance", label: "🕒 Ирцийн бүртгэл", perm: "attendance.log" },
-  { href: "/app/approvals", label: "✅ Цагийн хүсэлт", perm: "attendance.approvals" },
-  { href: "/app/reports", label: "📄 Тайлан", perm: "attendance.reports" },
-  { href: "/app/employees", label: "👥 Ажилтан", perm: "attendance.employees" },
-  { href: "/app/schedules", label: "🗓 Хуваарь", perm: "attendance.schedules" },
-  { href: "/app/locations", label: "📍 Байршил", perm: "attendance.locations" },
-  { href: "/app/devices", label: "📱 Утас бүртгэл", perm: "attendance.devices" },
-  { href: "/app/holidays", label: "🎉 Баярын өдөр", perm: "attendance.calendar" },
-  { href: "/app/workdays", label: "📆 Ажлын өдөр", perm: "attendance.calendar" },
+export const ATTENDANCE_TABS: { href: string; label: string; icon: IconName; perm: Perm; exact?: boolean }[] = [
+  { href: "/app", label: "Ирц бүртгүүлэх", icon: "clock", perm: "attendance.punch", exact: true },
+  { href: "/app/history", label: "Түүх", icon: "history", perm: "attendance.punch" },
+  { href: "/app/requests", label: "Миний хүсэлт", icon: "send", perm: "attendance.punch" },
+  { href: "/app/dashboard", label: "Самбар", icon: "chart", perm: "attendance.dashboard" },
+  { href: "/app/attendance", label: "Ирцийн бүртгэл", icon: "list", perm: "attendance.log" },
+  { href: "/app/approvals", label: "Цагийн хүсэлт", icon: "check", perm: "attendance.approvals" },
+  { href: "/app/reports", label: "Тайлан", icon: "report", perm: "attendance.reports" },
+  { href: "/app/employees", label: "Ажилтан", icon: "users", perm: "attendance.employees" },
+  { href: "/app/schedules", label: "Хуваарь", icon: "calendar", perm: "attendance.schedules" },
+  { href: "/app/locations", label: "Байршил", icon: "pin", perm: "attendance.locations" },
+  { href: "/app/devices", label: "Утас бүртгэл", icon: "phone", perm: "attendance.devices" },
+  { href: "/app/holidays", label: "Баярын өдөр", icon: "calendar", perm: "attendance.calendar" },
+  { href: "/app/workdays", label: "Ажлын өдөр", icon: "calendar", perm: "attendance.calendar" },
 ];
 
 /** Нэвтэрсний дараа очих хуудас: Цаг бүртгэл апп-ын эхний эрхтэй цэс, үгүй бол ШТС / Талон */
@@ -132,5 +133,5 @@ export function homeFor(emp: WithPerms): string {
   const tab = ATTENDANCE_TABS.find((t) => p.has(t.perm));
   if (tab) return tab.href;
   if ([...p].some((x) => x.startsWith("station."))) return "/station";
-  return talonHome(emp) ?? "/app/profile";
+  return talonHome(emp) ?? "/admin/profile";
 }

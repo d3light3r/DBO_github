@@ -31,5 +31,5 @@ test("эрх: «@апп» тэмдэгтэй бол зөвхөн тохируу�
   assert.ok(p.has("talon.sell")); // анхдагч хэвээр
   assert.equal(homeFor(e), "/app/reports");
   assert.equal(talonHome({ role: "employee", permissions: ["@talon", "@station", "@attendance"] }), null);
-  assert.equal(homeFor({ role: "employee", permissions: ["@talon", "@station", "@attendance"] }), "/app/profile");
+  assert.equal(homeFor({ role: "employee", permissions: ["@talon", "@station", "@attendance"] }), "/admin/profile");
 });

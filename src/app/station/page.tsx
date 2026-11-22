@@ -6,12 +6,17 @@ import { fmtMoney, round2 } from "@/lib/station-calc";
 import { fmtDateTime, todayUB } from "@/lib/time";
 import type { FuelType, StationShift } from "@/lib/types";
 import { saveFuelType } from "./actions";
+import { AppShell } from "@/components/app-shell";
 
 export default async function StationHome() {
   const { emp, isStaffAdmin, isAdmin, stations } = await stationContext();
   if (!isStaffAdmin && stations.length === 1) redirect(`/station/${stations[0].id}`);
   if (!isStaffAdmin && stations.length === 0) {
-    return <p className="card -mt-11 text-sm text-gray-600">Та ШТС-д оноогдоогүй байна. Админд хандана уу.</p>;
+    return (
+      <AppShell me={emp} app="station" title="⛽ ШТС апп" items={[{ href: "/station", label: "Станцууд", icon: "fuel", exact: true }]}>
+        <p className="card text-sm text-gray-600">Та ШТС-д оноогдоогүй байна. Админд хандана уу.</p>
+      </AppShell>
+    );
   }
 
   const db = createAdminClient();
@@ -26,8 +31,8 @@ export default async function StationHome() {
   const names = new Map((staff ?? []).map((e) => [e.id, e.full_name as string]));
 
   return (
-    <>
-      <section className="card -mt-11">
+    <AppShell me={emp} app="station" title="⛽ ШТС апп" items={[{ href: "/station", label: "Станцууд", icon: "fuel", exact: true }]}>
+      <section className="card">
         <h2 className="font-semibold">Станцууд ({stations.length})</h2>
         <p className="text-xs text-gray-500">Станц бүрийн харьяалал, ажилтан, ээлжийн төлөв. Станц дээр дарж ээлж, тайлан, тохиргоо руу орно.</p>
         {isAdmin && (
@@ -107,6 +112,6 @@ export default async function StationHome() {
           </section>
         </div>
       )}
-    </>
+    </AppShell>
   );
 }

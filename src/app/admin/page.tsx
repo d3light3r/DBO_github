@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getCurrentEmployee } from "@/lib/auth";
 import { APPS } from "@/lib/permissions";
 
 const OPEN: Record<string, string> = { attendance: "/app/dashboard", station: "/station", talon: "/talon" };
 
 /** Удирдлага: апп-ууд руу орох, эрх тохируулах */
 export default async function AdminHome() {
-  await requireAdmin();
+  const me = await getCurrentEmployee();
+  if (me.role !== "admin") redirect("/admin/profile"); // бусдад Удирдлага = «Миний»
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Апп-ууд</h1>
