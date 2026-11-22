@@ -15,8 +15,10 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   const f = parseFilters(sp);
   const page = Math.max(1, Math.trunc(Number(sp.page)) || 1);
   const today = todayUB();
-  const sumFrom = f.from || `${today.slice(0, 7)}-01`;
+  // Огноо сонгоогүй бол нэгтгэл бүх хугацааг харуулна
+  const sumFrom = f.from || "2000-01-01";
   const sumTo = f.to || today;
+  const period = f.from || f.to ? `${f.from ? fmtDate(f.from) : "эхнээс"} – ${fmtDate(sumTo)}` : "бүх хугацаа";
   const db = createAdminClient();
   const org = me.organization_id;
 
@@ -45,8 +47,8 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   const sumOf = (k: "sold_cnt" | "redeemed_cnt" | "outstanding_cnt") =>
     sums.reduce((t, s) => ({ cnt: t.cnt + Number(s[k]), amt: t.amt + Number(s[k]) * s.denomination }), { cnt: 0, amt: 0 });
   const tiles = [
-    { label: `Зарсан (${fmtDate(sumFrom)} – ${fmtDate(sumTo)})`, ...sumOf("sold_cnt") },
-    { label: `Салбарт оруулсан (${fmtDate(sumFrom)} – ${fmtDate(sumTo)})`, ...sumOf("redeemed_cnt") },
+    { label: `Зарсан (${period})`, ...sumOf("sold_cnt") },
+    { label: `Салбарт оруулсан (${period})`, ...sumOf("redeemed_cnt") },
     { label: "Ашиглагдаагүй үлдэгдэл (нийт)", ...sumOf("outstanding_cnt") },
   ];
 
@@ -74,7 +76,7 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
         <table className="table">
           <thead>
             <tr>
-              <th>Салбар (оруулсан)</th>
+              <th>Салбарт оруулсан ({period})</th>
               {TALON_TYPES.map((t) => <th key={t.prefix} className="text-right">{fmtMoney(t.amount)}</th>)}
               <th className="text-right">Нийт дүн</th>
             </tr>
