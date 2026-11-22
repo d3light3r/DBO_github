@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { DEVICE_MESSAGES, deviceState } from "@/lib/device";
+import { can } from "@/lib/permissions";
 import { stationContext } from "@/lib/station-access";
 import { describeRanges, parseTalonForm, talonDbError } from "@/lib/talon";
 import { talonRpc } from "@/lib/talon-db";
@@ -20,6 +21,7 @@ export async function redeemTalons(_p: RedeemState, f: FormData): Promise<Redeem
   const { emp, stations } = await stationContext();
   const stationId = String(f.get("station_id") ?? "");
   if (!stations.some((x) => x.id === stationId)) return { ok: false, message: "Энэ ШТС-д хандах эрхгүй байна." };
+  if (!can(emp, "station.talon.redeem")) return { ok: false, message: "Талон бүртгэх эрхгүй байна." };
   const dev = await deviceState(emp);
   if (dev.kind !== "approved" && dev.kind !== "not_required") return { ok: false, message: DEVICE_MESSAGES[dev.kind] };
 
@@ -44,7 +46,7 @@ export async function redeemTalons(_p: RedeemState, f: FormData): Promise<Redeem
 }
 
 /**
- * ШТС-д ашигласан талоныг Excel-ээс импортлох (админ Талон апп → Тохиргоо-оос түр нээсэн үед).
+ * ШТС-д ашигласан талоныг Excel-ээс импортлох («ШТС талон импорт» эрхтэй ажилтан).
  * Огнооны хязгаар үйлчлэхгүй; зараагүй, өмнө оруулсан, ирээдүйн, зарсан огнооноос өмнөх бол бүгд буцна.
  */
 export async function importRedeemTalons(_p: RedeemState, f: FormData): Promise<RedeemState> {
@@ -55,8 +57,7 @@ export async function importRedeemTalons(_p: RedeemState, f: FormData): Promise<
   if (dev.kind !== "approved" && dev.kind !== "not_required") return { ok: false, message: DEVICE_MESSAGES[dev.kind] };
 
   const db = createAdminClient();
-  const { data: set } = await db.from("talon_settings").select("station_import").eq("organization_id", emp.organization_id).maybeSingle();
-  if (!set?.station_import) return { ok: false, message: "Импорт хаалттай байна. Админ Талон апп → Тохиргоо-оос нээнэ." };
+  if (!can(emp, "station.talon.import")) return { ok: false, message: "Талон импортлох эрхгүй байна." };
 
   const { rows, errors, duplicates, removed } = parseRedeemPaste(String(f.get("data") ?? ""));
   if (errors.length) return { ok: false, message: `Алдаатай ${errors.length} мөр байна (${errors.slice(0, 5).map((e) => `${e.line}-р мөр`).join(", ")}). Засаад дахин буулгана уу.` };

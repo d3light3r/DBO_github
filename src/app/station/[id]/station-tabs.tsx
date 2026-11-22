@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function StationTabs({ id, isAdmin }: { id: string; isAdmin: boolean }) {
+export function StationTabs({ id, isAdmin, talon }: { id: string; isAdmin: boolean; talon: boolean }) {
   const path = usePathname();
   const base = `/station/${id}`;
   const tabs = [
     { href: base, label: "🕒 Ээлж", active: path === base },
-    { href: `${base}/talons`, label: "🎫 Талон", active: path.startsWith(`${base}/talons`) },
+    ...(talon ? [{ href: `${base}/talons`, label: "🎫 Талон", active: path.startsWith(`${base}/talons`) }] : []),
     { href: `${base}/report`, label: "📊 Тайлан", active: path.startsWith(`${base}/report`) || path.startsWith(`${base}/shift`) },
     ...(isAdmin ? [{ href: `${base}/settings`, label: "⚙️ Тохиргоо", active: path.startsWith(`${base}/settings`) }] : []),
   ];

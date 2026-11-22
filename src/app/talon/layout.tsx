@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { requireStaffAdmin } from "@/lib/auth";
+import { requireTalonApp } from "@/lib/auth";
+import { permsOf } from "@/lib/permissions";
+import { canUseStationApp } from "@/lib/station-access";
 import { ROLE_LABELS } from "@/lib/types";
 import { TalonTabs } from "./talon-tabs";
 
-/** Талон апп: удирдлага (админ, менежер) талон зарах, бүртгэл хянах, харилцагч, тохиргоо */
+/** Талон апп: эрх оноосон ажилтан талон зарах, бүртгэл хянах, харилцагч, тохиргоо */
 export default async function TalonAppLayout({ children }: { children: React.ReactNode }) {
-  const me = await requireStaffAdmin();
+  const me = await requireTalonApp();
+  const perms = [...permsOf(me)];
+  const showStation = await canUseStationApp(me);
   return (
     <div className="mx-auto flex min-h-dvh max-w-6xl flex-col">
       <header className="rounded-b-3xl bg-gray-900 px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] text-white shadow">
@@ -16,14 +20,14 @@ export default async function TalonAppLayout({ children }: { children: React.Rea
           </Link>
           <div className="flex flex-wrap justify-end gap-2 text-xs">
             <Link href="/app" className="rounded-full bg-white/15 px-3 py-1">Ирц бүртгэл</Link>
-            <Link href="/station" className="rounded-full bg-white/15 px-3 py-1">⛽ ШТС</Link>
-            <Link href="/admin" className="rounded-full bg-white/15 px-3 py-1">Удирдлага</Link>
+            {showStation && <Link href="/station" className="rounded-full bg-white/15 px-3 py-1">⛽ ШТС</Link>}
+            {me.role !== "employee" && <Link href="/admin" className="rounded-full bg-white/15 px-3 py-1">Удирдлага</Link>}
           </div>
         </div>
       </header>
       <div className="-mt-7 px-4">
         <div className="card p-2">
-          <TalonTabs isAdmin={me.role === "admin"} />
+          <TalonTabs perms={perms} />
         </div>
       </div>
       <main className="flex-1 space-y-4 px-4 py-4 pb-12">{children}</main>

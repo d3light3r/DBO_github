@@ -1,4 +1,4 @@
-import { requireStaffAdmin } from "@/lib/auth";
+import { requirePerm } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { customerLabel, fmtMoney } from "@/lib/talon";
 import { nameKey, registerKey } from "@/lib/customer-import";
@@ -7,7 +7,7 @@ import { CustomerForm, type Customer } from "./customer-form";
 import { ImportForm } from "./import-form";
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ edit?: string; q?: string; merge?: string }> }) {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.customers", "/talon");
   const { edit, q, merge } = await searchParams;
   const db = createAdminClient();
   let query = db.from("customers").select("*").eq("organization_id", me.organization_id).order("name").limit(500);

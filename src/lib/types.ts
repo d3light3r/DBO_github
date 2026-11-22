@@ -17,6 +17,7 @@ export type Employee = {
   cycle_anchor_date: string | null;
   allow_trip: boolean;
   is_active: boolean;
+  permissions?: string[] | null; // апп доторх эрх (null = албан тушаалын анхдагч)
 };
 
 export type Branch = {

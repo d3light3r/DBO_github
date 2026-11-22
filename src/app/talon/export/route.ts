@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { NextResponse, type NextRequest } from "next/server";
-import { requireStaffAdmin } from "@/lib/auth";
+import { requirePerm } from "@/lib/auth";
 import { customerIdsFor, parseFilters, talonQuery, type TalonRow } from "@/lib/talon-query";
 import { fmtDate, fmtDateTime, todayUB } from "@/lib/time";
 
@@ -8,7 +8,7 @@ const CHUNK = 1000; // Supabase нэг хүсэлтэд 1000 мөр буцаад
 const MAX_ROWS = 200000;
 
 export async function GET(req: NextRequest) {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.list", "/talon");
   const f = parseFilters(Object.fromEntries(req.nextUrl.searchParams));
 
   const ids = await customerIdsFor(me.organization_id, f.cq);

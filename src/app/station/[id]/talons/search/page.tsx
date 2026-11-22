@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { can } from "@/lib/permissions";
 import { requireStationPage } from "@/lib/station-access";
 import { customerLabel, fmtMoney, FORM_PREFIXES, serialSortKey, talonAmount } from "@/lib/talon";
 import { customerIdsFor, parseFilters, talonQuery, type TalonFilters, type TalonRow } from "@/lib/talon-query";
@@ -63,6 +65,7 @@ export default async function StationTalonSearch({
   const { id } = await params;
   const sp = await searchParams;
   const { emp, station } = await requireStationPage(id);
+  if (!can(emp, "station.talon.search")) redirect(`/station/${id}/talons`);
   const org = emp.organization_id;
   const today = todayUB();
 

@@ -1,4 +1,6 @@
-import { requireStaffAdmin } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { requireTalonApp } from "@/lib/auth";
+import { can, talonHome } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { customerLabel, fmtMoney, TALON_TYPES } from "@/lib/talon";
 import { customerIdsFor, parseFilters, talonQuery, type TalonRow } from "@/lib/talon-query";
@@ -10,7 +12,8 @@ type Summary = { denomination: number; sold_cnt: number; redeemed_cnt: number; o
 type BranchSum = { branch_id: string | null; denomination: number; cnt: number };
 
 export default async function TalonsAdmin({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const me = await requireStaffAdmin();
+  const me = await requireTalonApp();
+  if (!can(me, "talon.list")) redirect(talonHome(me) ?? "/app");
   const sp = await searchParams;
   const f = parseFilters(sp);
   const page = Math.max(1, Math.trunc(Number(sp.page)) || 1);

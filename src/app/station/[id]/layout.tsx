@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { can } from "@/lib/permissions";
 import { requireStationPage, stationContext } from "@/lib/station-access";
 import { StationTabs } from "./station-tabs";
 
 export default async function StationLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { station, isAdmin } = await requireStationPage(id);
+  const { emp, station, isAdmin } = await requireStationPage(id);
+  const talon = can(emp, "station.talon.redeem") || can(emp, "station.talon.import") || can(emp, "station.talon.search");
   const { stations, isStaffAdmin } = await stationContext();
   return (
     <>
@@ -21,7 +23,7 @@ export default async function StationLayout({ children, params }: { children: Re
             <Link href="/station" className="whitespace-nowrap text-xs text-gray-500 underline">Бусад станц</Link>
           )}
         </div>
-        <StationTabs id={id} isAdmin={isAdmin} />
+        <StationTabs id={id} isAdmin={isAdmin} talon={talon} />
       </section>
       {children}
     </>

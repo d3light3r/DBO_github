@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireStaffAdmin } from "@/lib/auth";
+import { requirePerm } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { describeRanges, parseTalonForm, talonDbError } from "@/lib/talon";
 import { talonRpc } from "@/lib/talon-db";
@@ -17,7 +17,7 @@ const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 // ---------------- Харилцагч ----------------
 export async function saveCustomer(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.customers", "/talon");
   if (!s(f, "name") && !s(f, "register")) return { ok: false, message: "Нэр эсвэл регистрийн аль нэгийг оруулна уу." };
   const row = {
     organization_id: me.organization_id,
@@ -41,7 +41,7 @@ export async function saveCustomer(_p: FormState, f: FormData): Promise<FormStat
 // ---------------- Давхардсан харилцагчдыг нэгтгэх ----------------
 // Сонгосон харилцагчдын талоныг «үлдэх» харилцагч руу шилжүүлж, бусдыг устгана.
 export async function mergeCustomers(f: FormData): Promise<void> {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.customers", "/talon");
   const target = s(f, "target");
   const ids = [...new Set(f.getAll("ids").map(String))];
   if (!target || !ids.includes(target)) redirect("/talon/customers?merge=err");
@@ -71,7 +71,7 @@ export async function mergeCustomers(f: FormData): Promise<void> {
 
 // ---------------- Харилцагч импортлох (Excel-ээс хуулж буулгах) ----------------
 export async function importCustomers(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.customers", "/talon");
   // Алдаатай (регистр/нэр олдоогүй) мөрийг алгасаж, зөвийг нь импортлоно
   const { rows, errors } = parseCustomerPaste(String(f.get("data") ?? ""));
   if (!rows.length) return { ok: false, message: "Импортлох мөр алга. Мөр бүрт нэр эсвэл регистр байх ёстой." };
@@ -113,7 +113,7 @@ export async function importCustomers(_p: FormState, f: FormData): Promise<FormS
 
 // ---------------- Зарагдсан талон импортлох (Excel-ээс хуулж буулгах) ----------------
 export async function importTalons(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.sell", "/talon");
   const org = me.organization_id;
   const today = todayUB();
   const defaultDate = isDate(s(f, "sold_date")) ? s(f, "sold_date") : today;
@@ -184,12 +184,13 @@ export async function importTalons(_p: FormState, f: FormData): Promise<FormStat
 
 // ---------------- Талон зарах ----------------
 export async function sellTalons(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.sell", "/talon");
   const parsed = parseTalonForm((k) => s(f, k));
   if ("error" in parsed) return { ok: false, message: parsed.error };
   const customer = s(f, "customer_id");
   if (!customer) return { ok: false, message: "Харилцагч сонгоно уу." };
-  const soldDate = isDate(s(f, "sold_date")) ? s(f, "sold_date") : todayUB();
+  // Зарсан огноо үргэлж өнөөдөр (өөр өдөр сонгохгүй)
+  const soldDate = todayUB();
 
   const { data, error } = await talonRpc("sell", parsed.ranges, {
     p_org: me.organization_id,
@@ -205,9 +206,9 @@ export async function sellTalons(_p: FormState, f: FormData): Promise<FormState>
   };
 }
 
-// ---------------- Тохиргоо (зөвхөн админ) ----------------
+// ---------------- Тохиргоо: нөхөж оруулах хязгаар ----------------
 export async function saveTalonSettings(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireAdmin();
+  const me = await requirePerm("talon.backdate", "/talon");
   const raw = s(f, "backdate_days");
   const days = raw === "" ? null : Math.trunc(Number(raw));
   if (days != null && (!Number.isFinite(days) || days < 0 || days > 365))
@@ -224,9 +225,9 @@ export async function saveTalonSettings(_p: FormState, f: FormData): Promise<For
   };
 }
 
-// ---------------- Алдаа засах (зөвхөн админ) ----------------
+// ---------------- Алдаа засах ----------------
 export async function undoTalons(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireAdmin();
+  const me = await requirePerm("talon.undo", "/talon");
   const parsed = parseTalonForm((k) => s(f, k));
   if ("error" in parsed) return { ok: false, message: parsed.error };
   const mode = s(f, "mode") === "sale" ? "sale" : "redeem";
@@ -241,16 +242,4 @@ export async function undoTalons(_p: FormState, f: FormData): Promise<FormState>
     ok: true,
     message: mode === "sale" ? `${data} талоны борлуулалтыг устгалаа.` : `${data} талоны оруулалтыг цуцаллаа (дахин оруулах боломжтой).`,
   };
-}
-
-// ---------------- ШТС-д талон импорт түр нээх/хаах (зөвхөн админ) ----------------
-export async function setStationImport(f: FormData) {
-  const me = await requireAdmin();
-  const on = f.get("on") === "1";
-  const { error } = await createAdminClient()
-    .from("talon_settings")
-    .upsert({ organization_id: me.organization_id, station_import: on, updated_by: me.id, updated_at: new Date().toISOString() });
-  if (error) throw new Error(/station_import/.test(error.message) ? "Supabase дээр 0008_talon_station_import.sql-ийг ажиллуулна уу." : error.message);
-  revalidatePath("/talon", "layout");
-  revalidatePath("/station", "layout");
 }

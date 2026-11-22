@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { can } from "@/lib/permissions";
 import { requireStationPage } from "@/lib/station-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fmtMoney } from "@/lib/talon";
@@ -7,10 +9,13 @@ import { RedeemImportForm } from "./redeem-import-form";
 
 type Totals = { today_cnt: number; today_amount: number; shift_cnt: number; shift_amount: number };
 
-/** Ашигласан талон бүртгэх: маягт, (нээлттэй бол) импорт, өнөөдөр / ээлжийн дүн */
+/** Ашигласан талон бүртгэх: маягт, (эрхтэй бол) импорт, өнөөдөр / ээлжийн дүн */
 export default async function StationTalons({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { emp, station } = await requireStationPage(id);
+  const redeem = can(emp, "station.talon.redeem");
+  const stationImport = can(emp, "station.talon.import");
+  if (!redeem && !stationImport) redirect(can(emp, "station.talon.search") ? `/station/${id}/talons/search` : `/station/${id}`);
   const db = createAdminClient();
   const today = todayUB();
 
@@ -20,11 +25,10 @@ export default async function StationTalons({ params }: { params: Promise<{ id: 
   ]);
   const { data: totalsRow } = await db.rpc("talon_station_totals", { p_unit: station.id, p_shift: open.data?.id ?? null }).maybeSingle<Totals>();
   const back = settings.data?.backdate_days ?? 0;
-  const stationImport = !!(settings.data as { station_import?: boolean } | null)?.station_import;
 
   return (
     <>
-      <RedeemForm stationId={station.id} today={today} minDate={addDays(today, -back)} />
+      {redeem && <RedeemForm stationId={station.id} today={today} minDate={addDays(today, -back)} />}
       {stationImport && <RedeemImportForm stationId={station.id} stationName={station.name} today={today} />}
 
       <div className="grid grid-cols-2 gap-3">

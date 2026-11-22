@@ -29,7 +29,7 @@ export function SellForm({ customers, today }: { customers: Customer[]; today: s
       <TalonRangeFields key={k} />
       <div>
         <label className="label">Зарсан огноо</label>
-        <input type="date" name="sold_date" className="input" defaultValue={today} max={today} required />
+        <input type="date" className="input cursor-not-allowed bg-gray-100 text-gray-500" value={today} disabled readOnly />
       </div>
       <FormMessage state={state} />
       <button className="btn-primary w-full" disabled={pending}>{pending ? "Бүртгэж байна..." : "Зарсныг бүртгэх"}</button>

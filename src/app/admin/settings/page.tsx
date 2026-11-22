@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { todayUB } from "@/lib/time";
 import { Icon, type IconName } from "@/components/icons";
+import { APPS } from "@/lib/permissions";
 
 export default async function SettingsHome() {
   const me = await requireAdmin();
@@ -30,6 +31,29 @@ export default async function SettingsHome() {
     { href: "/admin/settings/workdays", icon: "calendar", title: "Нэмэлт ажлын өдөр", desc: "Амралтын өдөр ч ажиллах өдрүүд", stat: `${workdays.count ?? 0} удахгүй` },
   ];
 
+  return (
+    <div className="space-y-6">
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-gray-700">Апп эрх — апп сонгоод цэс бүрийг хэн харахыг ажилтан бүрт ононо</h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {APPS.map((a) => (
+            <Link key={a.key} href={`/admin/settings/permissions/${a.key}`} className="card block transition hover:ring-brand">
+              <span className="block font-semibold">{a.title}</span>
+              <span className="block text-xs text-gray-500">{a.desc}</span>
+              <span className="mt-1 block text-xs font-medium text-gray-700">{a.perms.map((p) => p.label).join(" · ")}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-gray-700">Ерөнхий тохиргоо</h2>
+        <SettingsCards cards={cards} />
+      </section>
+    </div>
+  );
+}
+
+function SettingsCards({ cards }: { cards: { href: string; icon: IconName; title: string; desc: string; stat: string }[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {cards.map((c) => (

@@ -1,4 +1,4 @@
-import { requireStaffAdmin } from "@/lib/auth";
+import { requirePerm } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { customerLabel, fmtMoney, groupRuns } from "@/lib/talon";
 import { addDays, fmtDate, fmtDateTime, todayUB } from "@/lib/time";
@@ -20,7 +20,7 @@ async function loadCustomers(org: string) {
 type Row = { serial: string; sold_date: string; sold_recorded_at: string; customer: { name: string; register: string | null } | null; seller: { full_name: string } | null };
 
 export default async function SellPage() {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("talon.sell", "/talon");
   const db = createAdminClient();
   const today = todayUB();
   const [customers, recent] = await Promise.all([

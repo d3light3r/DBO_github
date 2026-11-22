@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentEmployee } from "@/lib/auth";
 import { BottomNav } from "./bottom-nav";
 import { canUseStationApp } from "@/lib/station-access";
+import { canTalonApp } from "@/lib/permissions";
 
 export default async function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const emp = await getCurrentEmployee();
@@ -20,7 +21,7 @@ export default async function EmployeeLayout({ children }: { children: React.Rea
                 ⛽ ШТС апп →
               </Link>
             )}
-            {emp.role !== "employee" && (
+            {canTalonApp(emp) && (
               <Link href="/talon" className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium">
                 🎫 Талон апп →
               </Link>
