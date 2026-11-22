@@ -52,7 +52,7 @@ test("мөр: эхний дугаар + тоо ширхэг -> сүүлийн с
   assert.ok("error" in parseTalonRow("AC", "", "105", "")!);
 });
 
-test("маягт: AA, AB, AC мөрүүд", () => {
+test("маягт: AB, AA, AC мөрүүд", () => {
   const f: Record<string, string> = { from_AA: "0123456", qty_AA: "2", from_AC: "2345678", to_AC: "2345680" };
   const r = parseTalonForm((k) => f[k] ?? "");
   assert.ok(!("error" in r));

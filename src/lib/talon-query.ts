@@ -57,13 +57,13 @@ export async function customerIdsFor(org: string, cq: string): Promise<string[] 
   return (data ?? []).map((c) => c.id as string);
 }
 
-export function talonQuery(org: string, f: TalonFilters, count = false, customerIds: string[] | null = null) {
+const FULL_COLUMNS =
+  "id, serial, denomination, sold_date, sold_recorded_at, redeemed_date, redeemed_recorded_at, customer:customers(name, register), branch:units!talons_redeemed_branch_id_fkey(name), redeemer:employees!talons_redeemed_by_fkey(full_name)";
+
+export function talonQuery(org: string, f: TalonFilters, count = false, customerIds: string[] | null = null, columns = FULL_COLUMNS) {
   let q = createAdminClient()
     .from("talons")
-    .select(
-      "id, serial, denomination, sold_date, sold_recorded_at, redeemed_date, redeemed_recorded_at, customer:customers(name, register), branch:units!talons_redeemed_branch_id_fkey(name), redeemer:employees!talons_redeemed_by_fkey(full_name)",
-      count ? { count: "exact" } : undefined,
-    )
+    .select(columns, count ? { count: "exact" } : undefined)
     .eq("organization_id", org);
   if (f.type) q = q.like("serial", `${f.type}%`);
   if (f.serial) q = q.like("serial", `${f.serial}%`);

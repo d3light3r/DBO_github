@@ -65,8 +65,11 @@ export function parseRange(fromRaw: string, toRaw = ""): TalonRange | { error: s
   return { from, to, prefix: m[1] as TalonPrefix, count, amount, total: amount * count };
 }
 
-/** Маягтын мөрийн дараалал: AA, AB, AC */
-export const FORM_PREFIXES = ["AA", "AB", "AC"] as const;
+/** Талоны төрлийн харагдах дараалал (бүх газарт): AB, AA, AC */
+export const FORM_PREFIXES = ["AB", "AA", "AC"] as const;
+
+/** Сериалыг AB, AA, AC дарааллаар, дотроо дугаараар эрэмбэлэх түлхүүр */
+export const serialSortKey = (serial: string) => `${Math.max(0, FORM_PREFIXES.indexOf(serial.slice(0, 2) as never))}${serial}`;
 
 /**
  * Нэг төрлийн мөр: эхний дугаар (7 орон хүртэл), сүүлийн дугаар эсвэл тоо ширхэг.
@@ -113,7 +116,7 @@ export function describeRanges(ranges: TalonRange[]): string {
 
 /** Дараалсан сериалуудыг (ижил key-тэй) "AA0000001 – AA0000050" хэлбэрийн мужид нэгтгэнэ */
 export function groupRuns<T extends { serial: string }>(rows: T[], key: (r: T) => string) {
-  const sorted = [...rows].sort((a, b) => (key(a) + a.serial).localeCompare(key(b) + b.serial));
+  const sorted = [...rows].sort((a, b) => (key(a) + serialSortKey(a.serial)).localeCompare(key(b) + serialSortKey(b.serial)));
   const runs: { first: T; from: string; to: string; count: number; amount: number }[] = [];
   for (const r of sorted) {
     const last = runs.at(-1);

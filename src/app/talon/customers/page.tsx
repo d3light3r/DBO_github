@@ -57,39 +57,6 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <h1 className="text-xl font-bold">Харилцагч</h1>
       {merge === "err" && <p className="rounded-lg bg-brand-soft px-3 py-2 text-sm text-brand">Нэгтгэж чадсангүй. Үлдэх харилцагчийг сонгоод дор хаяж 2-ыг чагтална уу.</p>}
       {mergedCnt > 0 && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{mergedCnt} харилцагчийг нэгтгэж, {movedCnt} талоныг шилжүүллээ.</p>}
-      {groups.length > 0 && (
-        <section className="card space-y-3 ring-amber-300">
-          <div>
-            <h2 className="font-semibold">Давхардсан харилцагч ({groups.length} бүлэг)</h2>
-            <p className="text-xs text-gray-500">
-              Нэр (том/жижиг үсэг, зай, зураас ялгахгүй) эсвэл регистр нь ижил. <b>Үлдэх</b> харилцагчийг сонгоод «Нэгтгэх» дарвал
-              чагталсан бусад харилцагчийн бүх талон түүн рүү шилжиж, бусад нь устана. Хоосон регистр, утас, тэмдэглэлийг бусдаас нөхнө.
-            </p>
-          </div>
-          {groups.map((g) => (
-            <form key={g[0].id} action={mergeCustomers} className="rounded-lg border border-gray-200 p-3">
-              <table className="table text-sm">
-                <thead><tr><th>Үлдэх</th><th>Нэгтгэх</th><th>Нэр</th><th>Регистр</th><th>Талон (зарсан / ашигласан)</th></tr></thead>
-                <tbody>
-                  {g.map((c, i) => {
-                    const a = agg.get(c.id);
-                    return (
-                      <tr key={c.id}>
-                        <td><input type="radio" name="target" value={c.id} defaultChecked={i === 0} /></td>
-                        <td><input type="checkbox" name="ids" value={c.id} defaultChecked /></td>
-                        <td>{customerLabel(c)}{c.phone && <span className="text-xs text-gray-500"> · {c.phone}</span>}</td>
-                        <td>{c.register ?? "—"}</td>
-                        <td>{a ? `${a.sold_cnt} / ${a.redeemed_cnt}` : "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <button className="btn-primary mt-2">Нэгтгэх</button>
-            </form>
-          ))}
-        </section>
-      )}
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-3">
           <form className="flex gap-2">
@@ -125,6 +92,36 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         <div className="space-y-6">
           <CustomerForm key={editing?.id ?? "new"} customer={editing} />
           {!editing && <ImportForm />}
+          {groups.length > 0 && (
+            <section className="card space-y-3 ring-amber-300">
+              <div>
+                <h2 className="font-semibold">Давхардсан харилцагч нэгтгэх ({groups.length})</h2>
+                <p className="text-xs text-gray-500">
+                  Нэр (том/жижиг үсэг, зай, зураас ялгахгүй) эсвэл регистр ижил. <b>Үлдэх</b>-ийг сонгоод «Нэгтгэх» дарвал чагталсан
+                  бусдын бүх талон түүн рүү шилжиж, бусад нь устана. Хоосон регистр, утас, тэмдэглэлийг бусдаас нөхнө.
+                </p>
+              </div>
+              {groups.map((g) => (
+                <form key={g[0].id} action={mergeCustomers} className="space-y-1 rounded-lg border border-gray-200 p-2 text-sm">
+                  <div className="flex gap-2 px-1 text-[11px] uppercase text-gray-400"><span className="w-9">Үлдэх</span><span className="w-12">Нэгтгэх</span><span>Харилцагч · талон (зарсан / ашигласан)</span></div>
+                  {g.map((c, i) => {
+                    const a = agg.get(c.id);
+                    return (
+                      <div key={c.id} className="flex items-center gap-2 px-1">
+                        <span className="w-9"><input type="radio" name="target" value={c.id} defaultChecked={i === 0} /></span>
+                        <span className="w-12"><input type="checkbox" name="ids" value={c.id} defaultChecked /></span>
+                        <span className="min-w-0 flex-1">
+                          <b>{customerLabel(c)}</b>
+                          <span className="text-xs text-gray-500"> · {c.register ?? "регистргүй"} · {a ? `${a.sold_cnt} / ${a.redeemed_cnt}` : "0 / 0"}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <button className="btn-primary mt-1 w-full">Нэгтгэх</button>
+                </form>
+              ))}
+            </section>
+          )}
         </div>
       </div>
     </div>
