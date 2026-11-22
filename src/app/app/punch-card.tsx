@@ -102,7 +102,7 @@ export function PunchCard({ isWorking, checkInAt, allowTrip }: Props) {
   const dateStr = now ? mnDate(now) : "";
 
   return (
-    <section className="card -mt-8 text-center">
+    <section className="card text-center">
       <p className="text-4xl font-bold tabular-nums tracking-tight">{clock}</p>
       <p className="mb-4 text-xs text-gray-500">{dateStr}</p>
 

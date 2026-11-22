@@ -6,12 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 
 const tabs: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin/settings/permissions", label: "Апп эрх", icon: "users" },
-  { href: "/admin/settings/devices", label: "Утас бүртгэл", icon: "phone" },
   { href: "/admin/settings/structure", label: "Компани, бүтэц", icon: "tree" },
-  { href: "/admin/settings/branches", label: "Координат", icon: "pin" },
-  { href: "/admin/settings/schedules", label: "Ажлын хуваарь", icon: "clock" },
-  { href: "/admin/settings/holidays", label: "Баярын өдөр", icon: "calendar" },
-  { href: "/admin/settings/workdays", label: "Ажлын өдөр", icon: "calendar" },
 ];
 
 export function SettingsTabs({ pendingDevices }: { pendingDevices: number }) {

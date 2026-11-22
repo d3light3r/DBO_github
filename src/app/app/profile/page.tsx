@@ -1,13 +1,13 @@
 import { getCurrentEmployee } from "@/lib/auth";
 import { ROLE_LABELS } from "@/lib/types";
-import { signOut } from "../actions";
+import { signOut } from "@/app/app/actions";
 import { PasswordForm } from "./password-form";
-import { LocationHelpAuto } from "../location-help";
+import { LocationHelpAuto } from "@/app/app/location-help";
 
 export default async function ProfilePage() {
   const emp = await getCurrentEmployee();
   return (
-    <>
+    <div className="space-y-4">
       <section className="card text-sm">
         <dl className="grid grid-cols-2 gap-y-1">
           <dt className="text-gray-500">Нэр</dt><dd className="text-right">{emp.full_name}</dd>
@@ -29,6 +29,6 @@ export default async function ProfilePage() {
       <form action={signOut}>
         <button className="btn-ghost w-full">Гарах</button>
       </form>
-    </>
+    </div>
   );
 }

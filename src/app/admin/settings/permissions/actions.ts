@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { APPS, permsOf } from "@/lib/permissions";
+import { APPS, appMarker, configuredApps, permsOf } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Role } from "@/lib/types";
 
@@ -25,9 +25,11 @@ export async function saveAppPermissions(f: FormData) {
   const groups = new Map<string, string[]>();
   for (const e of (data ?? []) as { id: string; role: Role; permissions: string[] | null }[]) {
     if (e.role === "admin") continue; // админ үргэлж бүх эрхтэй
+    // Одоогийн бүх эрх (тохируулаагүй апп-д анхдагч) + энэ апп-ын сонголт; тохируулсан апп-ууд «@апп» тэмдэгтэй
     const current = [...permsOf(e)] as string[];
     const checked = f.getAll(`p:${e.id}`).map(String).filter((p) => appPerms.includes(p));
-    const next = [...current.filter((p) => !appPerms.includes(p)), ...checked].sort();
+    const marks = [...new Set([...configuredApps(e.permissions), app.key])].map(appMarker);
+    const next = [...new Set([...current.filter((p) => !appPerms.includes(p)), ...checked, ...marks])].sort();
     if (e.permissions && [...e.permissions].sort().join() === next.join()) continue;
     const key = next.join(",");
     groups.set(key, [...(groups.get(key) ?? []), e.id]);

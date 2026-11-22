@@ -10,7 +10,21 @@
   color-scheme: light;
 }
 
+/* Ямар ч дэлгэцэнд (гар утас, веб) хуудас хажуу тийш тасрахгүй */
+html,
 body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+body {
+  overflow-wrap: break-word;
   background: #f4f5f7;
   color: #111827;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;

@@ -40,7 +40,7 @@ export default async function StationSettingsPage({ params }: { params: Promise<
           {staff.length === 0 && <li className="py-1.5 text-gray-400">Ажилтан оноогоогүй байна.</li>}
         </ul>
         <p className="text-xs text-gray-500">
-          Ажилтныг <Link href="/admin/employees" className="text-brand underline">Удирдлага → Ажилтан</Link> хэсгээс засаж «Салбар»-т энэ ШТС-ийг сонгоно.
+          Ажилтныг <Link href="/app/employees" className="text-brand underline">Цаг бүртгэл апп → Ажилтан</Link> хэсгээс засаж «Салбар»-т энэ ШТС-ийг сонгоно.
           📍 Координат нь ажилтан «Ирлээ» дарах цэг.
         </p>
       </section>

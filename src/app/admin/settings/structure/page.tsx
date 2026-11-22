@@ -176,7 +176,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
           })}
         </nav>
         <div className="flex flex-wrap items-center gap-2 pb-2">
-          <Link href="/admin/employees?filter=nodept" className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-sm ring-1 ring-gray-200">
+          <Link href="/app/employees?filter=nodept" className="flex items-center gap-2 rounded-xl bg-white px-3 py-1.5 text-sm ring-1 ring-gray-200">
             Алба хэлтэсгүй ажилтан:
             <span className={`rounded-full px-2 text-xs font-bold text-white ${noDept ? "bg-brand" : "bg-gray-300"}`}>{noDept}</span>
           </Link>

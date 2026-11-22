@@ -5,7 +5,7 @@ import { loadStationSetup, tankStatuses, type TankStatus } from "@/lib/station";
 import { fmtLiters, fmtMoney, round2, round3 } from "@/lib/station-calc";
 import { addDays, fmtDateTime, reportRange } from "@/lib/time";
 import type { FuelReceipt, StationShift } from "@/lib/types";
-import { Kpi } from "@/app/admin/kpi";
+import { Kpi } from "@/app/app/dashboard/kpi";
 
 type ReadingRow = { shift_id: string; liters: number | null; amount: number | null; nozzle: { tank: { fuel_type_id: string } | null } | null };
 

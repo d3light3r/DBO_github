@@ -14,14 +14,14 @@ export default async function TalonAppLayout({ children }: { children: React.Rea
     <div className="mx-auto flex min-h-dvh max-w-6xl flex-col">
       <header className="rounded-b-3xl bg-gray-900 px-5 pb-10 pt-[max(1.25rem,env(safe-area-inset-top))] text-white shadow">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/talon">
+          <Link href="/talon" className="min-w-0">
             <p className="text-xs opacity-70">{me.full_name} · {ROLE_LABELS[me.role]}</p>
             <h1 className="text-lg font-bold">🎫 Талон апп</h1>
           </Link>
           <div className="flex flex-wrap justify-end gap-2 text-xs">
-            <Link href="/app" className="rounded-full bg-white/15 px-3 py-1">Ирц бүртгэл</Link>
+            <Link href="/app" className="rounded-full bg-white/15 px-3 py-1">🕒 Цаг бүртгэл</Link>
             {showStation && <Link href="/station" className="rounded-full bg-white/15 px-3 py-1">⛽ ШТС</Link>}
-            {me.role !== "employee" && <Link href="/admin" className="rounded-full bg-white/15 px-3 py-1">Удирдлага</Link>}
+            {me.role === "admin" && <Link href="/admin" className="rounded-full bg-white/15 px-3 py-1">Удирдлага</Link>}
           </div>
         </div>
       </header>

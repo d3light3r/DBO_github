@@ -7,20 +7,13 @@ import { Icon, type IconName } from "@/components/icons";
 type Item = { href: string; label: string; icon: IconName; admin: boolean; badge?: "requests" | "devices" };
 
 const items: Item[] = [
-  { href: "/admin", label: "Нүүр хуудас", icon: "home", admin: false },
-  { href: "/admin/attendance", label: "Ирцийн бүртгэл", icon: "clock", admin: false },
-  { href: "/admin/requests", label: "Цагийн хүсэлт", icon: "send", admin: false, badge: "requests" },
-  { href: "/admin/reports", label: "Тайлан", icon: "report", admin: false },
-  { href: "/admin/employees", label: "Ажилтан", icon: "users", admin: true },
+  { href: "/admin", label: "Апп-ууд", icon: "home", admin: true },
   { href: "/admin/settings/structure", label: "Алба хэлтэс", icon: "tree", admin: true },
-  { href: "/admin/settings/schedules", label: "Хуваарь", icon: "calendar", admin: true },
-  { href: "/admin/settings/branches", label: "Байршил", icon: "pin", admin: true },
-  { href: "/admin/settings/devices", label: "Утас бүртгэл", icon: "phone", admin: true, badge: "devices" },
   { href: "/admin/settings", label: "Тохиргоо", icon: "settings", admin: true },
 ];
 
 // Дээрх цэсэнд тусдаа байгаа тохиргооны дэд хуудсууд "Тохиргоо"-г идэвхжүүлэхгүй
-const OWN = ["/admin/settings/structure", "/admin/settings/schedules", "/admin/settings/branches", "/admin/settings/devices"];
+const OWN = ["/admin/settings/structure"];
 
 export function AdminNav({ isAdmin, counts }: { isAdmin: boolean; counts: { requests: number; devices: number } }) {
   const path = usePathname();

@@ -9,19 +9,25 @@ export function TalonSubTabs({ id }: { id: string }) {
   const base = `/station/${id}/talons`;
   const tabs = [
     { href: base, label: "🎫 Ашигласан талон бүртгэх", active: path === base },
-    { href: `${base}/search`, label: "🔍 Талон шүүх", active: path.startsWith(`${base}/search`) },
+    {
+      href: `${base}/search`,
+      label: "🔍 Талон шүүх",
+      active: path.startsWith(`${base}/search`),
+    },
   ];
   return (
-    <nav className="flex gap-2">
-      {tabs.map((t) => (
-        <Link
-          key={t.href}
-          href={t.href}
-          className={`flex-1 rounded-lg border px-3 py-2 text-center text-sm ${t.active ? "border-brand bg-brand-soft font-semibold text-brand" : "border-gray-200 bg-white text-gray-600"}`}
-        >
-          {t.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="card p-2">
+      <nav className="flex overflow-x-auto rounded-xl bg-gray-100 p-1">
+        {tabs.map((t) => (
+          <Link
+            key={t.href}
+            href={t.href}
+            className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-center text-sm ${t.active ? "bg-white font-semibold shadow-sm" : "text-gray-500"}`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }

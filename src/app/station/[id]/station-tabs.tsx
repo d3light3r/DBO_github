@@ -13,12 +13,12 @@ export function StationTabs({ id, isAdmin, talon }: { id: string; isAdmin: boole
     ...(isAdmin ? [{ href: `${base}/settings`, label: "⚙️ Тохиргоо", active: path.startsWith(`${base}/settings`) }] : []),
   ];
   return (
-    <nav className="flex rounded-xl bg-gray-100 p-1">
+    <nav className="flex overflow-x-auto rounded-xl bg-gray-100 p-1">
       {tabs.map((t) => (
         <Link
           key={t.href}
           href={t.href}
-          className={`flex-1 rounded-lg px-2 py-1.5 text-center text-sm ${t.active ? "bg-white font-semibold shadow-sm" : "text-gray-500"}`}
+          className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-center text-sm ${t.active ? "bg-white font-semibold shadow-sm" : "text-gray-500"}`}
         >
           {t.label}
         </Link>

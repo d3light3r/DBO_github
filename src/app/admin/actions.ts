@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireStaffAdmin } from "@/lib/auth";
+import { requireAdmin, requirePerm } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone, phoneToEmail } from "@/lib/phone";
 
@@ -16,7 +16,7 @@ const n = (f: FormData, k: string) => {
 
 // ---------------- Координат (ирц бүртгэх цэг) ----------------
 export async function saveBranch(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.locations", "/app");
   const lat = n(f, "latitude");
   const lng = n(f, "longitude");
   if (!s(f, "name") || lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng))
@@ -36,14 +36,14 @@ export async function saveBranch(_p: FormState, f: FormData): Promise<FormState>
     ? await db.from("branches").update(row).eq("id", id).eq("organization_id", me.organization_id)
     : await db.from("branches").insert(row);
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/admin/settings/branches");
-  if (id) redirect("/admin/settings/branches");
+  revalidatePath("/app/locations");
+  if (id) redirect("/app/locations");
   return { ok: true, message: "Хадгаллаа." };
 }
 
 // ---------------- Хуваарь ----------------
 export async function saveSchedule(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.schedules", "/app");
   const kind = s(f, "kind") === "cycle" ? "cycle" : "fixed";
   if (!s(f, "name")) return { ok: false, message: "Нэр оруулна уу." };
   const row = {
@@ -67,8 +67,8 @@ export async function saveSchedule(_p: FormState, f: FormData): Promise<FormStat
     ? await db.from("schedules").update(row).eq("id", id).eq("organization_id", me.organization_id)
     : await db.from("schedules").insert(row);
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/admin/settings/schedules");
-  if (id) redirect("/admin/settings/schedules");
+  revalidatePath("/app/schedules");
+  if (id) redirect("/app/schedules");
   return { ok: true, message: "Хадгаллаа." };
 }
 
@@ -145,37 +145,37 @@ export async function deleteUnit(f: FormData) {
 
 // ---------------- Координат, хуваарь устгах ----------------
 export async function deleteBranch(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.locations", "/app");
   await createAdminClient().from("branches").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/branches");
-  redirect("/admin/settings/branches");
+  revalidatePath("/app/locations");
+  redirect("/app/locations");
 }
 
 export async function deleteSchedule(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.schedules", "/app");
   await createAdminClient().from("schedules").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/schedules");
-  redirect("/admin/settings/schedules");
+  revalidatePath("/app/schedules");
+  redirect("/app/schedules");
 }
 
 // ---------------- Баярын өдөр ----------------
 export async function addHoliday(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.calendar", "/app");
   const date = s(f, "date");
   const name = s(f, "name");
   if (date && name) await createAdminClient().from("holidays").upsert({ organization_id: me.organization_id, date, name }, { onConflict: "organization_id,date" });
-  revalidatePath("/admin/settings/holidays");
+  revalidatePath("/app/holidays");
 }
 
 export async function deleteHoliday(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.calendar", "/app");
   await createAdminClient().from("holidays").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/holidays");
+  revalidatePath("/app/holidays");
 }
 
 // ---------------- Ажилтан ----------------
 export async function saveEmployee(_p: FormState, f: FormData): Promise<FormState> {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.employees", "/app");
   const db = createAdminClient();
   const id = s(f, "id");
   const phone = normalizePhone(s(f, "phone"));
@@ -184,6 +184,14 @@ export async function saveEmployee(_p: FormState, f: FormData): Promise<FormStat
     return { ok: false, message: "Нэр, код, утасны дугаараа зөв оруулна уу." };
   const role = ["admin", "manager", "employee"].includes(s(f, "role")) ? s(f, "role") : "employee";
   if (id === me.id && role !== "admin") return { ok: false, message: "Өөрийнхөө админ эрхийг хасах боломжгүй." };
+  // Админ биш хэрэглэгч админ эрх оноох, админыг засах боломжгүй
+  if (me.role !== "admin") {
+    if (role === "admin") return { ok: false, message: "Админ эрх зөвхөн админ ононо." };
+    if (id) {
+      const { data: target } = await db.from("employees").select("role").eq("id", id).eq("organization_id", me.organization_id).maybeSingle();
+      if (target?.role === "admin") return { ok: false, message: "Админы мэдээллийг зөвхөн админ засна." };
+    }
+  }
 
   const row = {
     organization_id: me.organization_id,
@@ -244,7 +252,7 @@ export async function saveEmployee(_p: FormState, f: FormData): Promise<FormStat
       await db.auth.admin.deleteUser(created.user.id);
       return { ok: false, message: error.message.includes("duplicate") ? "Код эсвэл утас давхардсан байна." : error.message };
     }
-    revalidatePath("/admin/employees");
+    revalidatePath("/app/employees");
     return { ok: true, message: `${row.full_name} нэмэгдлээ. Нэвтрэх: ${phone} / таны оруулсан нууц үг.` };
   }
 
@@ -259,13 +267,13 @@ export async function saveEmployee(_p: FormState, f: FormData): Promise<FormStat
   }
   const { error } = await db.from("employees").update(row).eq("id", id).eq("organization_id", me.organization_id);
   if (error) return { ok: false, message: error.message };
-  revalidatePath("/admin/employees");
-  redirect("/admin/employees");
+  revalidatePath("/app/employees");
+  redirect("/app/employees");
 }
 
 // ---------------- Томилолтын ирц батлах ----------------
 export async function reviewAttendance(f: FormData) {
-  const me = await requireStaffAdmin();
+  const me = await requirePerm("attendance.log", "/app");
   const decision = s(f, "decision") === "approved" ? "approved" : "rejected";
   await createAdminClient()
     .from("attendance_logs")
@@ -274,29 +282,29 @@ export async function reviewAttendance(f: FormData) {
     .eq("organization_id", me.organization_id)
     .eq("review_status", "pending")
     .neq("employee_id", me.id); // өөрийнхөө томилолтыг өөрөө батлахгүй
-  revalidatePath("/admin/attendance");
+  revalidatePath("/app/attendance");
 }
 
 
 // ---------------- Нэмэлт ажлын өдөр ----------------
 export async function addWorkDay(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.calendar", "/app");
   const date = s(f, "date");
   const name = s(f, "name");
   if (date && name)
     await createAdminClient().from("work_days").upsert({ organization_id: me.organization_id, date, name }, { onConflict: "organization_id,date" });
-  revalidatePath("/admin/settings/workdays");
+  revalidatePath("/app/workdays");
 }
 
 export async function deleteWorkDay(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.calendar", "/app");
   await createAdminClient().from("work_days").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/workdays");
+  revalidatePath("/app/workdays");
 }
 
 // ---------------- Утас бүртгэл ----------------
 export async function approveDevice(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.devices", "/app");
   const db = createAdminClient();
   const { data: dev } = await db
     .from("devices")
@@ -312,29 +320,29 @@ export async function approveDevice(f: FormData) {
     .from("devices")
     .update({ status: "approved", approved_by: me.id, approved_at: new Date().toISOString() })
     .eq("id", dev.id);
-  revalidatePath("/admin/settings/devices");
+  revalidatePath("/app/devices");
 }
 
 /** Хүсэлтээс татгалзах эсвэл батлагдсан утсыг цуцлах (утсыг дахин бүртгүүлэх боломжтой болно) */
 export async function removeDevice(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.devices", "/app");
   await createAdminClient().from("devices").delete().eq("id", s(f, "id")).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/devices");
+  revalidatePath("/app/devices");
 }
 
 /** Ажилтан бүрийн "зөвхөн бүртгэлтэй утаснаас" тохиргоо */
 export async function setEmployeeRequireDevice(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.devices", "/app");
   await createAdminClient()
     .from("employees")
     .update({ require_device: s(f, "value") === "on" })
     .eq("id", s(f, "employee_id"))
     .eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/devices");
+  revalidatePath("/app/devices");
 }
 
 export async function setAllRequireDevice(f: FormData) {
-  const me = await requireAdmin();
+  const me = await requirePerm("attendance.devices", "/app");
   await createAdminClient().from("employees").update({ require_device: s(f, "value") === "on" }).eq("organization_id", me.organization_id);
-  revalidatePath("/admin/settings/devices");
+  revalidatePath("/app/devices");
 }

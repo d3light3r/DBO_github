@@ -21,5 +21,5 @@ export async function login(_prev: string | null, form: FormData): Promise<strin
     await supabase.auth.signOut();
     return "Таны эрх идэвхгүй байна. Админд хандана уу.";
   }
-  redirect(emp.role === "employee" ? "/app" : "/admin");
+  redirect("/app"); // Цаг бүртгэл апп (эрхгүй бол эхний эрхтэй хуудас руу шилжинэ)
 }

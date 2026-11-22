@@ -41,7 +41,7 @@ export async function requireStationPage(stationId: string): Promise<{ emp: Empl
   return { emp: ctx.emp, station, isAdmin: ctx.isAdmin, isStaffAdmin: ctx.isStaffAdmin };
 }
 
-/** Ажилтны апп болон удирдлагад ШТС апп-ын холбоос харуулах эсэх */
+/** Цаг бүртгэл апп болон бусад апп-д ШТС апп-ын холбоос харуулах эсэх */
 export async function canUseStationApp(emp: Pick<Employee, "role" | "unit_id">): Promise<boolean> {
   if (emp.role === "admin" || emp.role === "manager") return true;
   if (!emp.unit_id) return false;

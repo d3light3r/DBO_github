@@ -25,7 +25,7 @@ export async function reviewRequest(f: FormData) {
     })
     .eq("id", id)
     .eq("status", "pending");
-  revalidatePath("/admin/requests");
-  revalidatePath("/admin");
+  revalidatePath("/app/approvals");
+  revalidatePath("/app/dashboard");
   revalidatePath("/app/requests");
 }

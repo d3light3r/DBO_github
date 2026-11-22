@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { APPS, permsOf } from "@/lib/permissions";
+import { APPS, isConfigured, permsOf } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type Role } from "@/lib/types";
 import { saveAppPermissions } from "../actions";
@@ -81,7 +81,7 @@ export default async function AppPermissions({
                       {ROLE_LABELS[e.role]}
                       {e.unit?.name ? ` · ${e.unit.name}` : ""}
                       {isAdmin && " · бүх эрх"}
-                      {!isAdmin && e.permissions == null && <span className="ml-1 rounded bg-gray-100 px-1 text-[10px]">анхдагч</span>}
+                      {!isAdmin && !isConfigured(e, app.key) && <span className="ml-1 rounded bg-gray-100 px-1 text-[10px]">анхдагч</span>}
                     </span>
                   </td>
                   {app.perms.map((p) => (

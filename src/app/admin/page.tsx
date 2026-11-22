@@ -1,58 +1,34 @@
 import Link from "next/link";
-import { requireStaffAdmin } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { todayUB } from "@/lib/time";
-import { StatsToday } from "./stats-today";
-import { StatsMonth } from "./stats-month";
+import { requireAdmin } from "@/lib/auth";
+import { APPS } from "@/lib/permissions";
 
-export default async function StatsPage({ searchParams }: { searchParams: Promise<{ view?: string; month?: string }> }) {
-  const me = await requireStaffAdmin();
-  const sp = await searchParams;
-  const view = sp.view === "month" ? "month" : "today";
-  const currentMonth = todayUB().slice(0, 7);
-  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.month ?? "") && sp.month! <= currentMonth ? sp.month! : currentMonth;
+const OPEN: Record<string, string> = { attendance: "/app/dashboard", station: "/station", talon: "/talon" };
 
-  const db = createAdminClient();
-  const [pendingReq, pendingDev] = await Promise.all([
-    db.from("requests").select("id", { count: "exact", head: true }).eq("organization_id", me.organization_id).eq("status", "pending"),
-    me.role === "admin"
-      ? db.from("devices").select("id", { count: "exact", head: true }).eq("organization_id", me.organization_id).eq("status", "pending")
-      : Promise.resolve({ count: 0 }),
-  ]);
-
-  const tab = (v: "today" | "month", label: string, href: string) => (
-    <Link
-      href={href}
-      className={`rounded-lg px-4 py-1.5 text-sm font-medium ${view === v ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"}`}
-    >
-      {label}
-    </Link>
-  );
-
+/** Удирдлага: апп-ууд руу орох, эрх тохируулах */
+export default async function AdminHome() {
+  await requireAdmin();
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Хянах самбар</h1>
-          <div className="flex rounded-xl bg-gray-200/70 p-1">
-            {tab("today", "Өнөөдөр", "/admin")}
-            {tab("month", "Сараар", `/admin?view=month&month=${month}`)}
+      <h1 className="text-2xl font-bold">Апп-ууд</h1>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {APPS.map((a) => (
+          <div key={a.key} className="card flex flex-col gap-3">
+            <div>
+              <p className="text-lg font-semibold">{a.title}</p>
+              <p className="text-xs text-gray-500">{a.desc}</p>
+              <p className="mt-2 text-xs text-gray-700">{a.perms.map((p) => p.label).join(" · ")}</p>
+            </div>
+            <div className="mt-auto flex gap-2">
+              <Link href={OPEN[a.key]} className="btn-primary flex-1 text-center">Нээх →</Link>
+              <Link href={`/admin/settings/permissions/${a.key}`} className="btn-ghost">Эрх</Link>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(pendingDev.count ?? 0) > 0 && (
-            <Link href="/admin/settings/devices" className="btn-ghost">📱 {pendingDev.count} утас батлах</Link>
-          )}
-          {(pendingReq.count ?? 0) > 0 && (
-            <Link href="/admin/requests" className="btn-primary">{pendingReq.count} хүсэлт хүлээгдэж байна →</Link>
-          )}
-        </div>
+        ))}
       </div>
-      {view === "today" ? (
-        <StatsToday orgId={me.organization_id} />
-      ) : (
-        <StatsMonth orgId={me.organization_id} month={month} currentMonth={currentMonth} />
-      )}
+      <p className="text-sm text-gray-500">
+        Ирц, цагийн хүсэлт, тайлан, ажилтан, хуваарь, байршил, утас бүртгэл, баярын болон ажлын өдөр одоо <b>🕒 Цаг бүртгэл апп</b>-д байна. Энд зөвхөн алба хэлтэс,
+        тохиргоо (апп эрх, компани бүтэц) үлдсэн.
+      </p>
     </div>
   );
 }

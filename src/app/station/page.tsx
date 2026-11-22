@@ -11,7 +11,7 @@ export default async function StationHome() {
   const { emp, isStaffAdmin, isAdmin, stations } = await stationContext();
   if (!isStaffAdmin && stations.length === 1) redirect(`/station/${stations[0].id}`);
   if (!isStaffAdmin && stations.length === 0) {
-    return <p className="card -mt-8 text-sm text-gray-600">Та ШТС-д оноогдоогүй байна. Админд хандана уу.</p>;
+    return <p className="card -mt-11 text-sm text-gray-600">Та ШТС-д оноогдоогүй байна. Админд хандана уу.</p>;
   }
 
   const db = createAdminClient();
@@ -27,13 +27,13 @@ export default async function StationHome() {
 
   return (
     <>
-      <section className="card -mt-8">
+      <section className="card -mt-11">
         <h2 className="font-semibold">Станцууд ({stations.length})</h2>
         <p className="text-xs text-gray-500">Станц бүрийн харьяалал, ажилтан, ээлжийн төлөв. Станц дээр дарж ээлж, тайлан, тохиргоо руу орно.</p>
         {isAdmin && (
           <p className="mt-1 text-xs text-gray-500">
             Шинэ ШТС: <Link href="/admin/settings/structure" className="text-brand underline">Тохиргоо → Компани, бүтэц</Link>-ээс салбар нэмж «⛽ ШТС» гэж
-            тэмдэглэнэ. Ажилтныг <Link href="/admin/employees" className="text-brand underline">Ажилтан</Link> хэсгээс тухайн салбарт оноо.
+            тэмдэглэнэ. Ажилтныг <Link href="/app/employees" className="text-brand underline">Ажилтан</Link> хэсгээс тухайн салбарт оноо.
           </p>
         )}
       </section>

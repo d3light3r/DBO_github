@@ -10,21 +10,20 @@ export default async function StationLayout({ children, params }: { children: Re
   const { stations, isStaffAdmin } = await stationContext();
   return (
     <>
-      <section className="card -mt-8 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 className="text-xl font-bold">⛽ {station.name}</h2>
-            <p className="text-xs text-gray-500">
-              🏢 {station.company_name} · {station.department_name}
-              {!station.is_active && <span className="ml-1 text-brand">(идэвхгүй)</span>}
-            </p>
-          </div>
+      {/* Талон апп шиг: толгойн доор табтай карт */}
+      <div className="card -mt-11 space-y-2 p-2">
+        <StationTabs id={id} isAdmin={isAdmin} talon={talon} />
+        <div className="flex items-center justify-between gap-2 px-2 pb-1">
+          <p className="text-sm">
+            <b>⛽ {station.name}</b>
+            <span className="text-xs text-gray-500"> · 🏢 {station.company_name} · {station.department_name}</span>
+            {!station.is_active && <span className="ml-1 text-xs text-brand">(идэвхгүй)</span>}
+          </p>
           {isStaffAdmin && stations.length > 1 && (
             <Link href="/station" className="whitespace-nowrap text-xs text-gray-500 underline">Бусад станц</Link>
           )}
         </div>
-        <StationTabs id={id} isAdmin={isAdmin} talon={talon} />
-      </section>
+      </div>
       {children}
     </>
   );

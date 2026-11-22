@@ -1,25 +1,18 @@
 import Link from "next/link";
-import { requireStaffAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS } from "@/lib/types";
 import { Icon } from "@/components/icons";
 import { AdminNav } from "./admin-nav";
-import { reviewableEmployeeIds } from "@/lib/approvals";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const me = await requireStaffAdmin();
+  // Удирдлага: зөвхөн админ (Апп-ууд, Алба хэлтэс, Тохиргоо)
+  const me = await requireAdmin();
   const db = createAdminClient();
   const org = me.organization_id;
-  const allowed = await reviewableEmployeeIds(me);
-  let reqQ = db.from("requests").select("id", { count: "exact", head: true }).eq("organization_id", org).eq("status", "pending");
-  if (allowed !== null) reqQ = reqQ.in("employee_id", allowed.length ? allowed : ["00000000-0000-0000-0000-000000000000"]);
-  const [active, total, requests, devices] = await Promise.all([
+  const [active, total] = await Promise.all([
     db.from("employees").select("id", { count: "exact", head: true }).eq("organization_id", org).eq("is_active", true),
     db.from("employees").select("id", { count: "exact", head: true }).eq("organization_id", org),
-    reqQ,
-    me.role === "admin"
-      ? db.from("devices").select("id", { count: "exact", head: true }).eq("organization_id", org).eq("status", "pending")
-      : Promise.resolve({ count: 0 }),
   ]);
   const a = active.count ?? 0;
   const t = total.count ?? 0;
@@ -46,15 +39,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <p className="mt-1 text-[11px] text-gray-500">идэвхтэй / нийт</p>
           </div>
           <div className="flex gap-3 text-xs text-gray-400 md:hidden">
-            <Link href="/app">Ажилтны апп</Link>
+            <Link href="/app">🕒 Цаг бүртгэл</Link>
             <Link href="/station">⛽ ШТС</Link>
             <Link href="/talon">🎫 Талон</Link>
           </div>
         </div>
-        <AdminNav isAdmin={me.role === "admin"} counts={{ requests: requests.count ?? 0, devices: devices.count ?? 0 }} />
+        <AdminNav isAdmin counts={{ requests: 0, devices: 0 }} />
         <div className="mt-auto hidden space-y-1 border-t border-white/10 px-3 py-3 text-xs md:block">
           <Link href="/app" className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-gray-400 hover:bg-white/5 hover:text-white">
-            <Icon name="clock" className="h-4 w-4" /> Ажилтны апп
+            <Icon name="clock" className="h-4 w-4" /> Цаг бүртгэл апп
           </Link>
           <Link href="/station" className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-gray-400 hover:bg-white/5 hover:text-white">
             <Icon name="fuel" className="h-4 w-4" /> ШТС апп
