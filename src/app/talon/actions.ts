@@ -38,6 +38,37 @@ export async function saveCustomer(_p: FormState, f: FormData): Promise<FormStat
   return { ok: true, message: `${row.name || row.register} нэмэгдлээ.` };
 }
 
+// ---------------- Давхардсан харилцагчдыг нэгтгэх ----------------
+// Сонгосон харилцагчдын талоныг «үлдэх» харилцагч руу шилжүүлж, бусдыг устгана.
+export async function mergeCustomers(f: FormData): Promise<void> {
+  const me = await requireStaffAdmin();
+  const target = s(f, "target");
+  const ids = [...new Set(f.getAll("ids").map(String))];
+  if (!target || !ids.includes(target)) redirect("/talon/customers?merge=err");
+  const sources = ids.filter((x) => x !== target);
+  if (!sources.length) redirect("/talon/customers?merge=err");
+
+  const db = createAdminClient();
+  const { data: list } = await db.from("customers").select("*").eq("organization_id", me.organization_id).in("id", ids);
+  if (!list || list.length !== ids.length) redirect("/talon/customers?merge=err");
+  const keep = list.find((c) => c.id === target)!;
+
+  // 1) Талоныг шилжүүлнэ (алдаа гарвал юу ч устгахгүй)
+  const { error, count } = await db.from("talons").update({ customer_id: target }, { count: "exact" })
+    .eq("organization_id", me.organization_id).in("customer_id", sources);
+  if (error) redirect(`/talon/customers?merge=err`);
+
+  // 2) Бусдыг устгана
+  await db.from("customers").delete().eq("organization_id", me.organization_id).in("id", sources);
+
+  // 3) Үлдэх харилцагчийн хоосон талбарыг бусдаас нөхнө
+  const pick = (k: "register" | "phone" | "note") => keep[k] || list.find((c) => c[k])?.[k] || null;
+  await db.from("customers").update({ register: pick("register"), phone: pick("phone"), note: pick("note") }).eq("id", target);
+
+  revalidatePath("/talon", "layout");
+  redirect(`/talon/customers?merge=${sources.length}-${count ?? 0}`);
+}
+
 // ---------------- Харилцагч импортлох (Excel-ээс хуулж буулгах) ----------------
 export async function importCustomers(_p: FormState, f: FormData): Promise<FormState> {
   const me = await requireStaffAdmin();
