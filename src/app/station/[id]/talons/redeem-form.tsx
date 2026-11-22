@@ -17,7 +17,7 @@ export function RedeemForm({ stationId, today, minDate }: { stationId: string; t
   return (
     <form action={action} className="card space-y-3">
       <input type="hidden" name="station_id" value={stationId} />
-      <h2 className="font-semibold">🎫 Талон оруулах</h2>
+      <h2 className="font-semibold">🎫 Ашигласан талон бүртгэх</h2>
       <p className="text-xs text-gray-500">Харилцагч талоноор шатахуун авсан бол сериалыг оруулна. Олон талон бол эхний, сүүлийн дугаарыг бичнэ.</p>
       <TalonRangeFields key={formKey} autoFocus />
       {minDate < today ? (
@@ -29,7 +29,7 @@ export function RedeemForm({ stationId, today, minDate }: { stationId: string; t
         <input type="hidden" name="date" value={today} />
       )}
       <FormMessage state={state} />
-      <button className="btn-primary w-full" disabled={pending}>{pending ? "Шалгаж байна..." : "Оруулах"}</button>
+      <button className="btn-primary w-full" disabled={pending}>{pending ? "Шалгаж байна..." : "Бүртгэлд оруулах"}</button>
     </form>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { fmtMoney, FORM_PREFIXES, talonAmount } from "@/lib/talon";
 
 type Props = { type: string; cq: string; serial: string; from: string; to: string; today: string; yesterday: string };
@@ -15,6 +15,17 @@ export function TalonFilter(p: Props) {
   const pick = (d: string) => {
     setFrom(d);
     setTo(d);
+    setToTouched(false);
+  };
+  // Эхлэх огноо сонгоход дуусах огноог (гараар сонгоогүй бол) тэр сарын сүүлийн өдөр болгоно
+  const [toTouched, setToTouched] = useState(false);
+  const changeFrom = (d: string) => {
+    setFrom(d);
+    if (!toTouched && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const [y, m] = d.split("-").map(Number);
+      const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+      setTo(end > p.today ? p.today : end);
+    }
   };
 
   // Хаягаас шүүлтийг арилгана: хэрэглэгч хуудсаа refresh хийхэд өнөөдөр сонгогдож, талбарууд хоосорно
@@ -53,16 +64,40 @@ export function TalonFilter(p: Props) {
         </div>
         <div>
           <label className="label">Эхлэх огноо</label>
-          <input type="date" name="from" value={from} onChange={(e) => setFrom(e.target.value)} max={p.today} className="input" required />
+          <input type="date" name="from" value={from} onChange={(e) => changeFrom(e.target.value)} max={p.today} className="input" required />
         </div>
         <div>
           <label className="label">Дуусах огноо</label>
-          <input type="date" name="to" value={to} onChange={(e) => setTo(e.target.value)} max={p.today} className="input" required />
+          <input type="date" name="to" value={to} onChange={(e) => {
+              setTo(e.target.value);
+              setToTouched(true);
+            }} max={p.today} className="input" required />
         </div>
         <div className="flex items-end">
           <button className="btn-primary w-full">Шүүх</button>
         </div>
       </div>
     </form>
+  );
+}
+
+/** Харилцагчаар / Талоноор: аль нэг жагсаалтыг харуулна (хуудас ачаалахгүй) */
+export function ViewSwitch({ initial, customers, talons }: { initial: "customer" | "talon"; customers: ReactNode; talons: ReactNode }) {
+  const [view, setView] = useState(initial);
+  return (
+    <>
+      <div className="flex gap-4 px-1 text-sm">
+        {[
+          { v: "customer" as const, label: "Харилцагчаар" },
+          { v: "talon" as const, label: "Талоноор" },
+        ].map((o) => (
+          <label key={o.v} className="flex cursor-pointer items-center gap-1.5">
+            <input type="radio" name="view" checked={view === o.v} onChange={() => setView(o.v)} />
+            {o.label}
+          </label>
+        ))}
+      </div>
+      {view === "customer" ? customers : talons}
+    </>
   );
 }
