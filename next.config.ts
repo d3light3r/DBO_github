@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: { bodySizeLimit: "5mb" },
   },
+  // `npm run dev`-ийг дотоод сүлжээний IP-ээр (жнь 192.168.1.7:3000, утас / өөр компьютер) нээхэд
+  // Next.js dev JS-ийг хаадаг тул хуудас ажиллахгүй (товч дарагдахгүй) болдог — дотоод сүлжээг зөвшөөрнө
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
   poweredByHeader: false,
   async headers() {
     return [
