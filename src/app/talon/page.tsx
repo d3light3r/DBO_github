@@ -38,6 +38,28 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const branchList = (branches.data ?? []) as { id: string; name: string }[];
   const sums = (summary.data ?? []) as Summary[];
+  // Хугацаагаар шүүсэн бол үлдэгдлийг дуусах огнооны байдлаар (тэр өдөр хүртэл зарсан, тэр өдрөөр ашиглагдаагүй)
+  const filtered = !!(f.from || f.to);
+  if (filtered) {
+    const asOf = await Promise.all(
+      TALON_TYPES.map((t) =>
+        db
+          .from("talons")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", org)
+          .eq("denomination", t.amount)
+          .lte("sold_date", sumTo)
+          .or(`redeemed_date.is.null,redeemed_date.gt.${sumTo}`),
+      ),
+    );
+    TALON_TYPES.forEach((t, i) => {
+      const row = sums.find((x) => x.denomination === t.amount);
+      const cnt = asOf[i].count ?? 0;
+      if (row) row.outstanding_cnt = cnt;
+      else sums.push({ denomination: t.amount, sold_cnt: 0, redeemed_cnt: 0, outstanding_cnt: cnt });
+    });
+  }
+  const leftLabel = filtered ? `${fmtDate(sumTo)}-ны байдлаар` : "нийт";
   const bsums = (bsum.data ?? []) as BranchSum[];
 
   const qs = (patch: Record<string, string | number>) => {
@@ -52,12 +74,12 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
   const cols = [
     { k: "sold_cnt", label: "Зарсан" },
     { k: "redeemed_cnt", label: "Салбараас бүртгэсэн" },
-    { k: "outstanding_cnt", label: "Ашиглагдаагүй үлдэгдэл" },
+    { k: "outstanding_cnt", label: `Ашиглагдаагүй үлдэгдэл (${leftLabel})` },
   ] as const;
   const tiles = [
     { label: `Зарсан (${period})`, ...sumOf("sold_cnt") },
     { label: `Салбараас бүртгэсэн (${period})`, ...sumOf("redeemed_cnt") },
-    { label: "Ашиглагдаагүй үлдэгдэл (нийт)", ...sumOf("outstanding_cnt") },
+    { label: `Ашиглагдаагүй үлдэгдэл (${leftLabel})`, ...sumOf("outstanding_cnt") },
   ];
 
   return (
@@ -84,7 +106,7 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
         <table className="table">
           <thead>
             <tr>
-              <th>Талоны төрөл</th>
+              <th>Талоны төрөл ({period})</th>
               {cols.map((c) => <th key={c.k} className="text-right">{c.label}</th>)}
             </tr>
           </thead>
