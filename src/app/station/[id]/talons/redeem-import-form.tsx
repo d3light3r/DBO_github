@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { importRedeemTalons, type RedeemState } from "./actions";
 import { FormMessage } from "@/components/form-message";
 import { fmtMoney } from "@/lib/talon";
@@ -8,6 +8,12 @@ import { parseRedeemPaste } from "@/lib/talon-redeem-import";
 
 export function RedeemImportForm({ stationId, stationName, today }: { stationId: string; stationName: string; today: string }) {
   const [text, setText] = useState("");
+  // Хуудас бүрэн ачаалахаас өмнө буулгасан текстийг (React-д мэдэгдээгүй) ачаалсны дараа уншина
+  const area = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const v = area.current?.value;
+    if (v) setText(v);
+  }, []);
   const [state, action, pending] = useActionState(async (prev: RedeemState, f: FormData) => {
     const res = await importRedeemTalons(prev, f);
     if (res?.ok) setText("");
@@ -31,7 +37,7 @@ export function RedeemImportForm({ stationId, stationName, today }: { stationId:
         <b>{stationName}</b>-д ашигласан талон. Мөр бүр: <b>Огноо · AB · 1234567</b> (жнь 2026.05.08 · AB · 671) эсвэл <b>Огноо · AB1234567</b>.
         Тоо 7-оос цөөн оронтой бол урдаас нь 0-ээр нөхнө. Огнооны хязгааргүй (зарсан огнооноос өмнөх, ирээдүйн огноо болохгүй).
       </p>
-      <textarea name="data" value={text} onChange={(e) => setText(e.target.value)} rows={5} className="input font-mono text-xs"
+      <textarea ref={area} name="data" value={text} onChange={(e) => setText(e.target.value)} rows={5} className="input font-mono text-xs"
         placeholder={"2026.05.08\tAB\t671\n2026.05.08\tAB\t672\n2026.05.09\tAA\t0000225"} spellCheck={false} />
       <div>
         <label className="label">Огноо (мөрөнд огноогүй бол)</label>
