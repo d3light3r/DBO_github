@@ -84,7 +84,11 @@ export default async function StationTalonSearch({
     to = end > today ? today : end;
     notice = `${days < 1 ? "Дуусах огноо эхлэх огнооноос өмнө байсан" : `Хугацаа ${days} хоног байсан`} тул эхлэх огнооноос хамгийн ихдээ ${MAX_DAYS} хоногоор (${fmtDate(from)} – ${fmtDate(to)}) харууллаа.`;
   }
-  const f: TalonFilters = { ...pf, status: "redeemed", field: "redeemed", branch: station.id, from, to };
+  // Сериалаар хайхад огноогоор хязгаарлахгүй (тухайн талоныг хэзээ оруулсан нь мэдэгдэхгүй)
+  const bySerial = !!pf.serial;
+  if (bySerial) notice = "";
+  const f: TalonFilters = { ...pf, status: "redeemed", field: "redeemed", branch: station.id, from: bySerial ? "" : from, to: bySerial ? "" : to };
+  const period = bySerial ? `сериал «${pf.serial}» · бүх огноо` : `${fmtDate(from)} – ${fmtDate(to)}`;
   const view = sp.view === "talon" ? "talon" : "customer";
   const page = Math.max(1, Math.trunc(Number(sp.page)) || 1);
   const types = FORM_PREFIXES.filter((x) => !f.type || x === f.type);
@@ -131,13 +135,13 @@ export default async function StationTalonSearch({
     <>
       <section className="card space-y-3">
         <TalonFilter key={`${from}|${to}|${f.customer}`} type={f.type} cq={f.cq} serial={f.serial} from={from} to={to} today={today} yesterday={yesterday} />
-        <p className="text-xs text-gray-500">Оруулсан огноогоор, хамгийн ихдээ {MAX_DAYS} хоногоор шүүнэ. Дуусах огноо сонгоогүй бол эхлэх огнооны сарын сүүлийн өдөр хүртэл.</p>
+        <p className="text-xs text-gray-500">Оруулсан огноогоор, хамгийн ихдээ {MAX_DAYS} хоногоор шүүнэ. Сериалаар хайвал бүх огноогоос хайна. Дуусах огноо сонгоогүй бол эхлэх огнооны сарын сүүлийн өдөр хүртэл.</p>
         {notice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">⚠️ {notice}</p>}
       </section>
 
       <>
           <section className="card">
-            <h2 className="mb-2 text-sm font-semibold">Нийлбэр · {fmtDate(from)} – {fmtDate(to)}</h2>
+            <h2 className="mb-2 text-sm font-semibold">Нийлбэр · {period}</h2>
             <table className="table text-sm">
               <thead><tr><th>Төрөл</th><th className="text-right">Ширхэг</th><th className="text-right">Дүн</th></tr></thead>
               <tbody>
@@ -162,7 +166,7 @@ export default async function StationTalonSearch({
             initial={view}
             customers={
           <section className="card overflow-x-auto">
-            <h2 className="mb-2 text-sm font-semibold">Харилцагчаар · {fmtDate(from)} – {fmtDate(to)}</h2>
+            <h2 className="mb-2 text-sm font-semibold">Харилцагчаар · {period}</h2>
             <p className="mb-1 text-xs text-gray-500">Харилцагч дээр дарвал энэ хугацааны талоны жагсаалт гарна.</p>
             {custRows.length === 0 ? (
               <p className="py-4 text-center text-sm text-gray-400">Энэ хугацаанд оруулсан талон алга</p>
@@ -201,7 +205,7 @@ export default async function StationTalonSearch({
             }
             talons={
           <section className="card">
-            <h2 className="mb-2 text-sm font-semibold">Оруулсан талон ({total}) · {fmtDate(from)} – {fmtDate(to)}</h2>
+            <h2 className="mb-2 text-sm font-semibold">Оруулсан талон ({total}) · {period}</h2>
             {f.customer && (
               <p className="mb-2 text-xs">
                 Харилцагч: <b>{customerLabel(all[0]?.customer ?? null)}</b> ·{" "}

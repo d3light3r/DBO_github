@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "./supabase/admin";
-import { normalizeSerial } from "./talon";
+import { fmtSerial, normalizeSerial } from "./talon";
 
 export type TalonFilters = {
   type: string; // AA | AB | AC | ""
@@ -66,7 +66,14 @@ export function talonQuery(org: string, f: TalonFilters, count = false, customer
     .select(columns, count ? { count: "exact" } : undefined)
     .eq("organization_id", org);
   if (f.type) q = q.like("serial", `${f.type}%`);
-  if (f.serial) q = q.like("serial", `${f.serial}%`);
+  if (f.serial) {
+    // «2065» → AA/AB/AC0002065; «AB2065» → AB0002065 эсвэл AB2065…-аар эхэлсэн; бүтэн сериал → яг тэр
+    const digits = /^\d{1,7}$/.exec(f.serial);
+    const typed = /^(A[ABC])(\d{1,7})$/.exec(f.serial);
+    if (digits) q = q.like("serial", `${f.type || "A_"}${f.serial.padStart(7, "0")}`);
+    else if (typed && typed[2].length < 7) q = q.or(`serial.eq.${fmtSerial(typed[1], Number(typed[2]))},serial.like.${f.serial}*`);
+    else q = q.like("serial", `${f.serial}%`);
+  }
   if (f.status === "sold") q = q.is("redeemed_date", null);
   if (f.status === "redeemed") q = q.not("redeemed_date", "is", null);
   if (f.branch) q = q.eq("redeemed_branch_id", f.branch);
