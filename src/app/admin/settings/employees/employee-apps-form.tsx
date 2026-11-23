@@ -16,15 +16,27 @@ export function EmployeeAppsForm({
   role,
   q,
   initial,
-  notes,
+  stations,
+  initialStations,
+  stationDefault,
 }: {
   empId: string;
   role: Role;
   q: string;
   initial: string[];
-  notes: Partial<Record<string, string>>;
+  stations: { id: string; name: string; is_active: boolean }[];
+  initialStations: string[];
+  stationDefault: string;
 }) {
   const [checked, setChecked] = useState(() => new Set(initial));
+  const [picked, setPicked] = useState(() => new Set(initialStations));
+  const pick = (id: string, on: boolean) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   const isAdmin = role === "admin";
 
   const toggle = (key: string, on: boolean) =>
@@ -55,6 +67,9 @@ export function EmployeeAppsForm({
       {[...checked].map((k) => (
         <input key={k} type="hidden" name="perm" value={k} />
       ))}
+      {[...picked].map((id) => (
+        <input key={id} type="hidden" name="station" value={id} />
+      ))}
 
       {APPS.map((app) => {
         const on = isAdmin || app.perms.some((p) => checked.has(p.key));
@@ -64,7 +79,6 @@ export function EmployeeAppsForm({
               <div className="min-w-0">
                 <p className="font-semibold">{app.title}</p>
                 <p className="text-xs text-gray-500">{app.desc}</p>
-                {notes[app.key] && on && <p className="mt-1 text-xs text-brand">{notes[app.key]}</p>}
               </div>
               <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
                 <span className={on ? "font-semibold text-emerald-700" : "text-gray-500"}>{on ? "Нэмэгдсэн" : "Хандахгүй"}</span>
@@ -96,6 +110,34 @@ export function EmployeeAppsForm({
                     </span>
                   </label>
                 ))}
+              </div>
+            )}
+            {on && app.key === "station" && (
+              <div className="space-y-2 border-t border-gray-100 pt-3">
+                <p className="text-sm font-medium">⛽ Хандах станц</p>
+                {isAdmin ? (
+                  <p className="text-xs text-gray-500">Админ бүх станцад хандана.</p>
+                ) : stations.length === 0 ? (
+                  <p className="text-xs text-gray-500">ШТС алга. «Алба хэлтэс»-ээс салбар нэмж «⛽ ШТС» гэж тэмдэглэнэ.</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {stations.map((s) => (
+                        <label
+                          key={s.id}
+                          className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 ${
+                            picked.has(s.id) ? "bg-brand-soft ring-brand" : "ring-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          <input type="checkbox" className="h-4 w-4" checked={picked.has(s.id)} onChange={(e) => pick(s.id, e.target.checked)} />
+                          {s.name}
+                          {!s.is_active && <span className="text-xs text-gray-400">(идэвхгүй)</span>}
+                        </label>
+                      ))}
+                    </div>
+                    {picked.size === 0 && <p className="text-xs text-brand">{stationDefault}</p>}
+                  </>
+                )}
               </div>
             )}
           </section>

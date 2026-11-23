@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
-import { APPS, hasApp, permsOf } from "@/lib/permissions";
+import { APPS, assignedStations, hasApp, permsOf } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type Role } from "@/lib/types";
 import { EmployeeAppsForm } from "./employee-apps-form";
@@ -23,7 +23,8 @@ export default async function EmployeePermissions({
 }) {
   const { q = "", emp: empId, saved, err } = await searchParams;
   const me = await requireAdmin();
-  let query = createAdminClient()
+  const db = createAdminClient();
+  let query = db
     .from("employees")
     .select("id, full_name, role, permissions, unit:units(name, is_station)")
     .eq("organization_id", me.organization_id)
@@ -31,15 +32,23 @@ export default async function EmployeePermissions({
     .order("full_name");
   const term = q.replace(/[%,()*\\]/g, " ").trim();
   if (term) query = query.or(`full_name.ilike.%${term}%,emp_code.ilike.%${term}%`);
-  const { data, error } = await query;
+  const [{ data, error }, { data: st }] = await Promise.all([
+    query,
+    db.from("units").select("id, name, is_active").eq("organization_id", me.organization_id).eq("is_station", true).order("name"),
+  ]);
+  const stations = (st ?? []) as { id: string; name: string; is_active: boolean }[];
   const emps = (data ?? []) as unknown as Emp[];
   const selected = emps.find((e) => e.id === empId) ?? null;
   const href = (id: string) => `/admin/settings/employees?emp=${id}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
 
-  const notes: Record<string, string> = {};
-  if (selected && selected.role === "employee" && !selected.unit?.is_station) {
-    notes.station = "Ажилтны салбар ⛽ ШТС биш тул ШТС апп-д хандахгүй. «Алба хэлтэс»-ээс ШТС салбарт оноогоорой.";
-  }
+  // Станц сонгоогүй үеийн анхдагч (хуучин журам)-ыг тайлбарлана
+  const stationDefault = !selected
+    ? ""
+    : selected.role === "manager"
+      ? "Станц сонгоогүй бол менежер бүх станцад хандана."
+      : selected.unit?.is_station
+        ? `Станц сонгоогүй бол өөрийн салбар «${selected.unit.name}»-д хандана.`
+        : "Станц сонгоогүй, салбар нь ⛽ ШТС биш тул ШТС апп-д хандахгүй — доороос станц сонгоно уу.";
 
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -97,7 +106,9 @@ export default async function EmployeePermissions({
               role={selected.role}
               q={q}
               initial={[...permsOf(selected)]}
-              notes={notes}
+              stations={stations}
+              initialStations={assignedStations(selected.permissions)}
+              stationDefault={stationDefault}
             />
           </>
         ) : (

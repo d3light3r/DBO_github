@@ -7,7 +7,7 @@ import type { NavItem } from "@/components/side-nav";
 export default async function StationLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { emp, station, isAdmin } = await requireStationPage(id);
-  const { stations, isStaffAdmin } = await stationContext();
+  const { stations } = await stationContext();
   const base = `/station/${id}`;
   const entry = can(emp, "station.talon.redeem") || can(emp, "station.talon.import");
   const all: [boolean, NavItem][] = [
@@ -16,7 +16,7 @@ export default async function StationLayout({ children, params }: { children: Re
     [can(emp, "station.talon.search"), { href: `${base}/talons/search`, label: "Талон шүүх", icon: "search" }],
     [true, { href: `${base}/report`, label: "Тайлан", icon: "report", also: [`${base}/shift`] }],
     [isAdmin, { href: `${base}/settings`, label: "Тохиргоо", icon: "settings" }],
-    [isStaffAdmin && stations.length > 1, { href: "/station", label: "Бусад станц", icon: "fuel", exact: true }],
+    [stations.length > 1, { href: "/station", label: "Бусад станц", icon: "fuel", exact: true }],
   ];
 
   return (

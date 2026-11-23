@@ -102,6 +102,15 @@ export const hasApp = (emp: WithPerms, app: AppKey) => {
   return [...p].some((x) => x.startsWith(`${app}.`));
 };
 
+/**
+ * ШТС апп-д хандах станцууд: Тохиргоо → Ажилтнаар-аас оноосон «st:<станцын id>» тэмдэг.
+ * Оноогоогүй (хоосон) бол хуучин журмаар: ажилтан өөрийн ШТС салбарт, менежер бүх станцад.
+ */
+const STATION_MARK = "st:";
+export const stationMarker = (id: string) => `${STATION_MARK}${id}`;
+export const assignedStations = (list: string[] | null | undefined): string[] =>
+  (list ?? []).filter((p) => p.startsWith(STATION_MARK)).map((p) => p.slice(STATION_MARK.length));
+
 /** Талон апп-ын аль нэг эрх байгаа эсэх */
 export const canTalonApp = (emp: WithPerms) => [...permsOf(emp)].some((p) => p.startsWith("talon."));
 
