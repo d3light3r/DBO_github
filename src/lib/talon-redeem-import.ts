@@ -30,7 +30,8 @@ export function parseRedeemPaste(text: string): RedeemImportResult {
   text.replace(/\r/g, "").split("\n").forEach((raw, i) => {
     const line = i + 1;
     if (!raw.trim()) return;
-    let cells = raw.split("\t").map((c) => c.trim().replace(/^"|"$/g, "").trim()).filter(Boolean);
+    // Excel-ийн таб, эсвэл хоосон зай / таслал / цэгтэй таслалаар тусгаарласан мөр
+    let cells = raw.split(/[\s;,]+/).map((c) => c.replace(/^"|"$/g, "").trim()).filter(Boolean);
     const shown = cells.join(" | ").slice(0, 60);
 
     let date: string | null = null;
