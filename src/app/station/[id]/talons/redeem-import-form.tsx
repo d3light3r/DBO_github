@@ -6,7 +6,17 @@ import { FormMessage } from "@/components/form-message";
 import { fmtMoney } from "@/lib/talon";
 import { parseRedeemPaste } from "@/lib/talon-redeem-import";
 
-export function RedeemImportForm({ stationId, stationName, today }: { stationId: string; stationName: string; today: string }) {
+export function RedeemImportForm({
+  stationId,
+  stationName,
+  today,
+  allowBeforeSale = false,
+}: {
+  stationId: string;
+  stationName: string;
+  today: string;
+  allowBeforeSale?: boolean;
+}) {
   const [text, setText] = useState("");
   // Хуудас бүрэн ачаалахаас өмнө буулгасан текстийг (React-д мэдэгдээгүй) ачаалсны дараа уншина
   const area = useRef<HTMLTextAreaElement>(null);
@@ -66,6 +76,15 @@ export function RedeemImportForm({ stationId, stationName, today }: { stationId:
             </div>
           )}
         </div>
+      )}
+      {allowBeforeSale && (
+        <label className="flex cursor-pointer items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
+          <input type="checkbox" name="before_sale" value="1" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <b>Зарсан огнооноос өмнөх огноог зөвшөөрөх</b> — талоны зарсан огноо буруу бүртгэгдсэн үед л ашиглана.
+            Зараагүй, өмнө оруулсан, ирээдүйн огноо хэвээр хориглогдоно.
+          </span>
+        </label>
       )}
       <p className="text-xs text-gray-500">Зараагүй, өмнө оруулсан талон байвал юу ч бүртгэгдэхгүй, аль талон болохыг харуулна.</p>
       <FormMessage state={state} />

@@ -29,7 +29,14 @@ export default async function StationTalons({ params }: { params: Promise<{ id: 
   return (
     <>
       {redeem && <RedeemForm stationId={station.id} today={today} minDate={addDays(today, -back)} />}
-      {stationImport && <RedeemImportForm stationId={station.id} stationName={station.name} today={today} />}
+      {stationImport && (
+        <RedeemImportForm
+          stationId={station.id}
+          stationName={station.name}
+          today={today}
+          allowBeforeSale={can(emp, "station.talon.before_sale")}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="card">

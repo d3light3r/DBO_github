@@ -43,6 +43,7 @@ export const APPS = [
       { key: "station.talon.redeem", label: "Ашигласан талон бүртгэх", desc: "Талоныг бүртгэлд оруулах" },
       { key: "station.talon.import", label: "ШТС талон импорт", desc: "Ашигласан талоныг Excel-ээс огнооны хязгааргүй оруулах" },
       { key: "station.talon.search", label: "Талон шүүх", desc: "Оруулсан талоныг шүүж, харилцагчаар тайлан харах" },
+      { key: "station.talon.before_sale", label: "Зарсан огнооноос өмнө оруулах", desc: "Импортод зарсан огнооноос өмнөх огноог түр зөвшөөрөх" },
     ],
   },
 ] as const;

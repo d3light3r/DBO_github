@@ -67,14 +67,25 @@ export async function importRedeemTalons(_p: RedeemState, f: FormData): Promise<
   const raw = String(f.get("date") ?? "");
   const fallback = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : todayUB();
 
+  // Зарсан огнооноос өмнөх огноо: эрхтэй + формд тусгайлан чагталсан үед л
+  const beforeSale = f.get("before_sale") === "1" && can(emp, "station.talon.before_sale");
   const { data, error } = await db.rpc("talon_redeem_import", {
     p_org: emp.organization_id,
     p_branch: stationId,
     p_by: emp.id,
     p_serials: rows.map((r) => r.serial),
     p_dates: rows.map((r) => r.date ?? fallback),
+    ...(beforeSale ? { p_allow_before_sale: true } : {}),
   });
-  if (error) return { ok: false, message: talonDbError(error) };
+  if (error && beforeSale && (error.code === "PGRST202" || /p_allow_before_sale/.test(error.message)))
+    return { ok: false, message: "Supabase дээр 0010_talon_import_before_sale.sql-ийг ажиллуулна уу." };
+  if (error) {
+    const hint =
+      /TALON_BEFORE_SALE/.test(error.message) && !beforeSale && can(emp, "station.talon.before_sale")
+        ? " Зарсан огноо буруу бол «Зарсан огнооноос өмнөх огноог зөвшөөрөх»-ийг чагтлаад дахин импортлоно уу."
+        : "";
+    return { ok: false, message: talonDbError(error) + hint };
+  }
   revalidatePath(`/station/${stationId}`, "layout");
   revalidatePath("/talon", "layout");
   const total = rows.reduce((t, r) => t + r.amount, 0);
