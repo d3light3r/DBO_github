@@ -11,6 +11,7 @@ type Emp = {
   role: Role;
   permissions?: string[] | null;
   unit: { name: string; is_station: boolean } | null;
+  department: { name: string } | null;
 };
 
 const SHORT: Record<string, string> = { attendance: "🕒", talon: "🎫", station: "⛽" };
@@ -26,7 +27,7 @@ export default async function EmployeePermissions({
   const db = createAdminClient();
   let query = db
     .from("employees")
-    .select("id, full_name, role, permissions, unit:units(name, is_station)")
+    .select("id, full_name, role, permissions, unit:units(name, is_station), department:departments!department_id(name)")
     .eq("organization_id", me.organization_id)
     .eq("is_active", true)
     .order("full_name");
@@ -74,6 +75,7 @@ export default async function EmployeePermissions({
                   </span>
                   <span className="block truncate text-xs text-gray-500">
                     {ROLE_LABELS[e.role]}
+                    {e.department?.name ? ` · ${e.department.name}` : ""}
                     {e.unit?.name ? ` · ${e.unit.name}` : ""}
                   </span>
                 </Link>
@@ -97,6 +99,7 @@ export default async function EmployeePermissions({
               <h2 className="text-lg font-semibold">{selected.full_name}</h2>
               <p className="text-xs text-gray-500">
                 {ROLE_LABELS[selected.role]}
+                {selected.department?.name ? ` · ${selected.department.name}` : ""}
                 {selected.unit?.name ? ` · ${selected.unit.name}` : ""} — апп-д нэмэх / хасах, цэсийн эрх
               </p>
             </div>

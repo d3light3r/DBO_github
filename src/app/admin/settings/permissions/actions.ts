@@ -20,6 +20,12 @@ export async function saveAppPermissions(f: FormData) {
   const db = createAdminClient();
   const { data, error } = await db.from("employees").select("id, role, permissions").eq("organization_id", me.organization_id).in("id", ids);
   if (error) redirect(`${base}?err=${/permissions/.test(error.message) ? "migration" : "db"}`);
+  // ШТС апп: ажилтан бүрийн «Хандах станц» багана (зөвхөн байгууллагын ШТС)
+  let orgStations: Set<string> | null = null;
+  if (app.key === "station") {
+    const { data: st } = await db.from("units").select("id").eq("organization_id", me.organization_id).eq("is_station", true);
+    orgStations = new Set((st ?? []).map((x) => x.id as string));
+  }
 
   // Ижил эрхтэй ажилтнуудыг нэг update-ээр хадгална
   const groups = new Map<string, string[]>();
@@ -29,8 +35,11 @@ export async function saveAppPermissions(f: FormData) {
     const current = [...permsOf(e)] as string[];
     const checked = f.getAll(`p:${e.id}`).map(String).filter((p) => appPerms.includes(p));
     const marks = [...new Set([...configuredApps(e.permissions), app.key])].map(appMarker);
-    // Оноосон ШТС-ууд хэвээр (ШТС апп-ын бүх цэсийг арилгавал хамт хасна)
-    if (app.key !== "station" || checked.length) marks.push(...assignedStations(e.permissions).map(stationMarker));
+    // Оноосон ШТС-ууд: ШТС апп-д маягтын сонголтоор, бусад апп-д хэвээр (ШТС-ын бүх цэсийг арилгавал хамт хасна)
+    const st = orgStations
+      ? f.getAll(`s:${e.id}`).map(String).filter((id) => orgStations.has(id))
+      : assignedStations(e.permissions);
+    if (app.key !== "station" || checked.length) marks.push(...st.map(stationMarker));
     const next = [...new Set([...current.filter((p) => !appPerms.includes(p)), ...checked, ...marks])].sort();
     if (e.permissions && [...e.permissions].sort().join() === next.join()) continue;
     const key = next.join(",");
@@ -64,7 +73,9 @@ export async function saveEmployeePermissions(f: FormData) {
   if (!emp) redirect("/admin/settings/employees");
   if ((emp.role as Role) === "admin") redirect(back("saved=0")); // админ үргэлж бүх эрхтэй
 
-  const valid = new Set<string>(APPS.flatMap((a) => a.perms.map((p) => p.key)));
+  // Зөвхөн асаалттай («Нэмэгдсэн») апп-уудын сонгосон цэс
+  const onApps = new Set(f.getAll("app").map(String));
+  const valid = new Set<string>(APPS.filter((a) => onApps.has(a.key)).flatMap((a) => a.perms.map((p) => p.key)));
   const checked = f.getAll("perm").map(String).filter((p) => valid.has(p));
   // Оноосон ШТС-ууд (зөвхөн байгууллагын идэвхтэй ШТС; ШТС апп хаалттай бол хадгалахгүй)
   const wanted = [...new Set(f.getAll("station").map(String))];

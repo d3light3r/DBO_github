@@ -1,15 +1,11 @@
-"use client";
-
-import { useState } from "react";
 import { APPS, ROLE_DEFAULTS } from "@/lib/permissions";
 import type { Role } from "@/lib/types";
 import { saveEmployeePermissions } from "../permissions/actions";
 
-type App = (typeof APPS)[number];
-
 /**
  * Нэг ажилтны бүх апп: апп бүрийг асааж / унтрааж (апп-д нэмэх / хасах), цэс бүрийг сонгоно.
- * Апп асаахад албан тушаалын анхдагч цэсүүд (байхгүй бол бүгд) сонгогдоно.
+ * JS-ээс хамааралгүй (энгийн checkbox + CSS) — хуудас бүрэн ачаалагдаагүй үед ч зөв хадгална.
+ * Хаалттай апп-ыг асаахад албан тушаалын анхдагч цэсүүд (байхгүй бол бүгд) сонгогдсон харагдана.
  */
 export function EmployeeAppsForm({
   empId,
@@ -28,92 +24,66 @@ export function EmployeeAppsForm({
   initialStations: string[];
   stationDefault: string;
 }) {
-  const [checked, setChecked] = useState(() => new Set(initial));
-  const [picked, setPicked] = useState(() => new Set(initialStations));
-  const pick = (id: string, on: boolean) =>
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(id);
-      else next.delete(id);
-      return next;
-    });
   const isAdmin = role === "admin";
-
-  const toggle = (key: string, on: boolean) =>
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(key);
-      else next.delete(key);
-      return next;
-    });
-
-  const setApp = (app: App, on: boolean) =>
-    setChecked((prev) => {
-      const next = new Set(prev);
-      const keys: string[] = app.perms.map((p) => p.key);
-      if (!on) keys.forEach((k) => next.delete(k));
-      else {
-        const roleDefaults: string[] = ROLE_DEFAULTS[role] ?? [];
-        const defaults = keys.filter((k) => roleDefaults.includes(k));
-        (defaults.length ? defaults : keys).forEach((k) => next.add(k));
-      }
-      return next;
-    });
+  const has = new Set(initial);
+  const roleDefaults: string[] = ROLE_DEFAULTS[role] ?? [];
 
   return (
     <form action={saveEmployeePermissions} className="space-y-3">
       <input type="hidden" name="emp" value={empId} />
       <input type="hidden" name="q" value={q} />
-      {[...checked].map((k) => (
-        <input key={k} type="hidden" name="perm" value={k} />
-      ))}
-      {[...picked].map((id) => (
-        <input key={id} type="hidden" name="station" value={id} />
-      ))}
 
       {APPS.map((app) => {
-        const on = isAdmin || app.perms.some((p) => checked.has(p.key));
+        const keys: string[] = app.perms.map((p) => p.key);
+        const on = isAdmin || keys.some((k) => has.has(k));
+        // Апп хаалттай бол асаахад сонгогдох анхдагч цэсүүд
+        const defaults = keys.filter((k) => roleDefaults.includes(k));
+        const preset = (k: string) => (on ? isAdmin || has.has(k) : (defaults.length ? defaults : keys).includes(k));
         return (
-          <section key={app.key} className={`card space-y-3 ${on ? "" : "bg-gray-50"}`}>
+          <section
+            key={app.key}
+            className="card space-y-3 [&:has(.app-switch:checked)_.when-off]:hidden [&:not(:has(.app-switch:checked))]:bg-gray-50 [&:not(:has(.app-switch:checked))_.when-on]:hidden"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-semibold">{app.title}</p>
                 <p className="text-xs text-gray-500">{app.desc}</p>
               </div>
               <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
-                <span className={on ? "font-semibold text-emerald-700" : "text-gray-500"}>{on ? "Нэмэгдсэн" : "Хандахгүй"}</span>
+                <span className="when-on font-semibold text-emerald-700">Нэмэгдсэн</span>
+                <span className="when-off text-gray-500">Хандахгүй</span>
                 <input
                   type="checkbox"
                   role="switch"
-                  className="peer sr-only"
-                  checked={on}
+                  name="app"
+                  value={app.key}
+                  className="app-switch peer sr-only"
+                  defaultChecked={on}
                   disabled={isAdmin}
-                  onChange={(e) => setApp(app, e.target.checked)}
                 />
                 <span className="relative h-6 w-11 rounded-full bg-gray-300 transition after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-brand peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40" />
               </label>
             </div>
-            {on && (
-              <div className="grid gap-1 border-t border-gray-100 pt-3 sm:grid-cols-2">
-                {app.perms.map((p) => (
-                  <label key={p.key} className="flex cursor-pointer items-start gap-2 rounded-lg p-1.5 hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0"
-                      checked={isAdmin || checked.has(p.key)}
-                      disabled={isAdmin}
-                      onChange={(e) => toggle(p.key, e.target.checked)}
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium">{p.label}</span>
-                      <span className="block text-xs text-gray-500">{p.desc}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {on && app.key === "station" && (
-              <div className="space-y-2 border-t border-gray-100 pt-3">
+            <div className="when-on grid gap-1 border-t border-gray-100 pt-3 sm:grid-cols-2">
+              {app.perms.map((p) => (
+                <label key={p.key} className="flex cursor-pointer items-start gap-2 rounded-lg p-1.5 hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    name="perm"
+                    value={p.key}
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    defaultChecked={preset(p.key)}
+                    disabled={isAdmin}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">{p.label}</span>
+                    <span className="block text-xs text-gray-500">{p.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            {app.key === "station" && (
+              <div className="when-on space-y-2 border-t border-gray-100 pt-3 [&:has(.st-pick:checked)_.st-default]:hidden">
                 <p className="text-sm font-medium">⛽ Хандах станц</p>
                 {isAdmin ? (
                   <p className="text-xs text-gray-500">Админ бүх станцад хандана.</p>
@@ -125,17 +95,21 @@ export function EmployeeAppsForm({
                       {stations.map((s) => (
                         <label
                           key={s.id}
-                          className={`flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 ${
-                            picked.has(s.id) ? "bg-brand-soft ring-brand" : "ring-gray-200 hover:bg-gray-50"
-                          }`}
+                          className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm ring-1 ring-gray-200 hover:bg-gray-50 has-[:checked]:bg-brand-soft has-[:checked]:ring-brand"
                         >
-                          <input type="checkbox" className="h-4 w-4" checked={picked.has(s.id)} onChange={(e) => pick(s.id, e.target.checked)} />
+                          <input
+                            type="checkbox"
+                            name="station"
+                            value={s.id}
+                            className="st-pick h-4 w-4"
+                            defaultChecked={initialStations.includes(s.id)}
+                          />
                           {s.name}
                           {!s.is_active && <span className="text-xs text-gray-400">(идэвхгүй)</span>}
                         </label>
                       ))}
                     </div>
-                    {picked.size === 0 && <p className="text-xs text-brand">{stationDefault}</p>}
+                    <p className="st-default text-xs text-brand">{stationDefault}</p>
                   </>
                 )}
               </div>
