@@ -81,23 +81,26 @@ export function TalonFilter(p: Props) {
   );
 }
 
-/** Харилцагчаар / Талоноор: аль нэг жагсаалтыг харуулна (хуудас ачаалахгүй) */
+/**
+ * Харилцагчаар / Талоноор: аль нэг жагсаалтыг харуулна (хуудас ачаалахгүй).
+ * JS-гүй, CSS (:has + :checked)-ээр солино — хуудас бүрэн ачаалахаас өмнө дарсан ч зөв ажиллана.
+ */
 export function ViewSwitch({ initial, customers, talons }: { initial: "customer" | "talon"; customers: ReactNode; talons: ReactNode }) {
-  const [view, setView] = useState(initial);
   return (
-    <>
+    <div className="space-y-4 [&:has(input[value=customer]:checked)_.view-talon]:hidden [&:has(input[value=talon]:checked)_.view-customer]:hidden">
       <div className="flex gap-4 px-1 text-sm">
         {[
           { v: "customer" as const, label: "Харилцагчаар" },
           { v: "talon" as const, label: "Талоноор" },
         ].map((o) => (
           <label key={o.v} className="flex cursor-pointer items-center gap-1.5">
-            <input type="radio" name="view" checked={view === o.v} onChange={() => setView(o.v)} />
+            <input type="radio" name="view" value={o.v} defaultChecked={initial === o.v} />
             {o.label}
           </label>
         ))}
       </div>
-      {view === "customer" ? customers : talons}
-    </>
+      <div className="view-customer">{customers}</div>
+      <div className="view-talon">{talons}</div>
+    </div>
   );
 }
