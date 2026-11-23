@@ -49,9 +49,14 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
 
   const sumOf = (k: "sold_cnt" | "redeemed_cnt" | "outstanding_cnt") =>
     sums.reduce((t, s) => ({ cnt: t.cnt + Number(s[k]), amt: t.amt + Number(s[k]) * s.denomination }), { cnt: 0, amt: 0 });
+  const cols = [
+    { k: "sold_cnt", label: "Зарсан" },
+    { k: "redeemed_cnt", label: "Салбараас бүртгэсэн" },
+    { k: "outstanding_cnt", label: "Ашиглагдаагүй үлдэгдэл" },
+  ] as const;
   const tiles = [
     { label: `Зарсан (${period})`, ...sumOf("sold_cnt") },
-    { label: `Салбарт оруулсан (${period})`, ...sumOf("redeemed_cnt") },
+    { label: `Салбараас бүртгэсэн (${period})`, ...sumOf("redeemed_cnt") },
     { label: "Ашиглагдаагүй үлдэгдэл (нийт)", ...sumOf("outstanding_cnt") },
   ];
 
@@ -79,7 +84,49 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
         <table className="table">
           <thead>
             <tr>
-              <th>Салбарт оруулсан ({period})</th>
+              <th>Талоны төрөл</th>
+              {cols.map((c) => <th key={c.k} className="text-right">{c.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {TALON_TYPES.map((t) => {
+              const s = sums.find((x) => x.denomination === t.amount);
+              return (
+                <tr key={t.prefix}>
+                  <td className="font-medium">{t.prefix} · {fmtMoney(t.amount)}</td>
+                  {cols.map((c) => {
+                    const n = Number(s?.[c.k] ?? 0);
+                    return (
+                      <td key={c.k} className="text-right">
+                        <span className="block font-semibold">{n || "—"}</span>
+                        {n > 0 && <span className="block text-xs text-gray-500">{fmtMoney(n * t.amount)}</span>}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+            <tr className="bg-gray-50">
+              <td className="font-semibold">Нийт</td>
+              {cols.map((c) => {
+                const t = sumOf(c.k);
+                return (
+                  <td key={c.k} className="text-right">
+                    <span className="block font-bold">{t.cnt || "—"}</span>
+                    {t.cnt > 0 && <span className="block text-xs text-gray-500">{fmtMoney(t.amt)}</span>}
+                  </td>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card overflow-x-auto p-0">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Салбараас бүртгэсэн ({period})</th>
               {TALON_TYPES.map((t) => <th key={t.prefix} className="text-right">{fmtMoney(t.amount)}</th>)}
               <th className="text-right">Нийт дүн</th>
             </tr>
@@ -116,7 +163,7 @@ export default async function TalonsAdmin({ searchParams }: { searchParams: Prom
               <select name="status" defaultValue={f.status} className="input">
                 <option value="">Бүгд</option>
                 <option value="sold">Зарагдсан, ашиглаагүй</option>
-                <option value="redeemed">Салбарт оруулсан</option>
+                <option value="redeemed">Салбараас бүртгэсэн</option>
               </select>
             </div>
             <div>
