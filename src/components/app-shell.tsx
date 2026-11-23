@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { canTalonApp } from "@/lib/permissions";
+import { canTalonApp, hasApp } from "@/lib/permissions";
 import { canUseStationApp } from "@/lib/station-access";
 import { ROLE_LABELS, type Employee } from "@/lib/types";
 import { Icon, type IconName } from "./icons";
@@ -34,8 +34,8 @@ export async function AppShell({
   children: React.ReactNode;
 }) {
   const allowed: Record<AppKey, boolean> = {
-    attendance: true,
-    station: await canUseStationApp(me),
+    attendance: hasApp(me, "attendance"),
+    station: hasApp(me, "station") && (await canUseStationApp(me)),
     talon: canTalonApp(me),
     admin: true, // Удирдлага: «Миний» хэнд ч, бусад цэс зөвхөн админд
   };

@@ -73,7 +73,7 @@ export async function saveSchedule(_p: FormState, f: FormData): Promise<FormStat
 }
 
 // ---------------- Бүтэц: Компани → Алба хэлтэс → Салбар ----------------
-const STRUCTURE = "/admin/settings/structure";
+const STRUCTURE = "/admin/structure";
 const isFk = (code?: string) => code === "23503";
 
 export async function saveCompany(f: FormData) {

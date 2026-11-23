@@ -96,6 +96,12 @@ export const isConfigured = (emp: WithPerms, app: AppKey) => configuredApps(emp.
 
 export const can = (emp: WithPerms, perm: Perm) => permsOf(emp).has(perm);
 
+/** Тухайн апп-д хандах эрхтэй эсэх = апп-ын аль нэг цэсийн эрхтэй (Тохиргоо → Ажилтнаар-аас нэмнэ / хасна) */
+export const hasApp = (emp: WithPerms, app: AppKey) => {
+  const p = permsOf(emp) as Set<string>;
+  return [...p].some((x) => x.startsWith(`${app}.`));
+};
+
 /** Талон апп-ын аль нэг эрх байгаа эсэх */
 export const canTalonApp = (emp: WithPerms) => [...permsOf(emp)].some((p) => p.startsWith("talon."));
 

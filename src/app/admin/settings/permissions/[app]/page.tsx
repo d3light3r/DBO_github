@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { APPS, isConfigured, permsOf } from "@/lib/permissions";
+import { APPS, hasApp, isConfigured, permsOf } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ROLE_LABELS, type Role } from "@/lib/types";
 import { saveAppPermissions } from "../actions";
@@ -27,15 +27,33 @@ export default async function AppPermissions({
   const term = (q ?? "").replace(/[%,()*\\]/g, " ").trim();
   if (term) query = query.or(`full_name.ilike.%${term}%,emp_code.ilike.%${term}%`);
   const { data } = await query;
-  const emps = (data ?? []) as unknown as Emp[];
-  const migrated = emps.length === 0 || "permissions" in emps[0];
+  const all = (data ?? []) as unknown as Emp[];
+  const migrated = all.length === 0 || "permissions" in all[0];
+  // Зөвхөн энэ апп-д нэмэгдсэн ажилтнууд (нэмэх / хасах нь «Ажилтнаар» табаас)
+  const emps = all.filter((e) => e.role === "admin" || hasApp(e, app.key));
 
   return (
     <div className="space-y-4">
+      <nav className="flex flex-wrap gap-2">
+        {APPS.map((a) => (
+          <Link
+            key={a.key}
+            href={`/admin/settings/permissions/${a.key}`}
+            className={`rounded-full px-3 py-1.5 text-sm ring-1 transition ${
+              a.key === app.key ? "bg-brand font-semibold text-white ring-brand" : "bg-white text-gray-700 ring-gray-200 hover:ring-brand"
+            }`}
+          >
+            {a.title}
+          </Link>
+        ))}
+      </nav>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <Link href="/admin/settings/permissions" className="text-xs text-brand">← Апп жагсаалт</Link>
-          <h2 className="text-lg font-semibold">{app.title} — эрх</h2>
+          <h2 className="text-lg font-semibold">{app.title} — цэсийн эрх</h2>
+          <p className="text-xs text-gray-500">
+            Энэ апп-д нэмэгдсэн {emps.length} ажилтан. Ажилтныг апп-д нэмэх / хасах:{" "}
+            <Link href="/admin/settings/employees" className="text-brand underline">Ажилтнаар</Link> таб.
+          </p>
         </div>
         <form className="flex gap-2">
           <input name="q" defaultValue={q} className="input max-w-xs" placeholder="Ажилтны нэр, кодоор хайх" />
@@ -103,14 +121,17 @@ export default async function AppPermissions({
             })}
             {emps.length === 0 && (
               <tr>
-                <td colSpan={app.perms.length + 1} className="py-6 text-center text-gray-400">Ажилтан олдсонгүй</td>
+                <td colSpan={app.perms.length + 1} className="py-6 text-center text-gray-400">
+                  Энэ апп-д нэмэгдсэн ажилтан алга.{" "}
+                  <Link href="/admin/settings/employees" className="text-brand underline">Ажилтнаар</Link> табаас нэмнэ үү.
+                </td>
               </tr>
             )}
           </tbody>
         </table>
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-4">
           <p className="text-xs text-gray-500">
-            «анхдагч» = эрх оноогоогүй, албан тушаалаар нь (менежер / ажилтан) өгсөн эрх. ШТС апп-д ажилтан зөвхөн өөрийн салбарт хандана.
+            «анхдагч» = эрх оноогоогүй, албан тушаалаар нь (менежер / ажилтан) өгсөн эрх. Бүх цэсийг арилгавал ажилтан апп-аас хасагдана. ШТС апп-д ажилтан зөвхөн өөрийн салбарт хандана.
           </p>
           <button className="btn-primary">Хадгалах</button>
         </div>

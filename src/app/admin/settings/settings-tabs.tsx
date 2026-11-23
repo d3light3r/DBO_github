@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "@/components/icons";
 
 const tabs: { href: string; label: string; icon: IconName }[] = [
-  { href: "/admin/settings/permissions", label: "Апп эрх", icon: "users" },
-  { href: "/admin/settings/structure", label: "Компани, бүтэц", icon: "tree" },
+  { href: "/admin/settings/permissions", label: "Аппаар", icon: "list" },
+  { href: "/admin/settings/employees", label: "Ажилтнаар", icon: "users" },
 ];
 
-export function SettingsTabs({ pendingDevices }: { pendingDevices: number }) {
+export function SettingsTabs() {
   const path = usePathname();
   return (
     <nav className="flex gap-1 overflow-x-auto border-b border-gray-200">
@@ -25,9 +25,6 @@ export function SettingsTabs({ pendingDevices }: { pendingDevices: number }) {
           >
             <Icon name={t.icon} />
             {t.label}
-            {t.href.endsWith("/devices") && pendingDevices > 0 && (
-              <span className="ml-1.5 rounded-full bg-brand px-1.5 text-xs text-white">{pendingDevices}</span>
-            )}
           </Link>
         );
       })}

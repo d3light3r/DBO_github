@@ -9,14 +9,14 @@ import { can, canTalonApp, type Perm } from "./permissions";
 /** Нэвтэрсэн ажилтан (байхгүй бол /login руу) */
 export const getCurrentEmployee = cache(async (): Promise<Employee> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // getClaims: JWT-г локалаар шалгана (Auth сервер рүү хүсэлт явуулахгүй) — хуудас бүр хурдан
+  const { data: auth } = await supabase.auth.getClaims();
+  const userId = auth?.claims?.sub;
+  if (!userId) redirect("/login");
   const { data } = await createAdminClient()
     .from("employees")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("is_active", true)
     .maybeSingle();
   if (!data) redirect("/login?error=inactive");

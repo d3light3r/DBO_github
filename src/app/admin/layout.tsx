@@ -12,8 +12,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ...(isAdmin
       ? ([
           { href: "/admin", label: "Апп-ууд", icon: "home", exact: true },
-          { href: "/admin/settings/structure", label: "Алба хэлтэс", icon: "tree" },
-          { href: "/admin/settings", label: "Тохиргоо", icon: "settings", exclude: ["/admin/settings/structure"] },
+          { href: "/admin/structure", label: "Алба хэлтэс", icon: "tree" },
+          { href: "/admin/settings", label: "Тохиргоо", icon: "settings" },
         ] as NavItem[])
       : []),
     { href: "/admin/profile", label: "Миний", icon: "user" },

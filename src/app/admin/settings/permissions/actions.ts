@@ -47,3 +47,26 @@ export async function saveAppPermissions(f: FormData) {
   revalidatePath("/", "layout");
   redirect(`${base}?saved=${changed}`);
 }
+
+/** Ажилтнаар: нэг ажилтны бүх апп-ын эрхийг хадгална (апп-ын бүх цэсийг арилгавал тухайн апп-аас хасагдана) */
+export async function saveEmployeePermissions(f: FormData) {
+  const me = await requireAdmin();
+  const id = String(f.get("emp") ?? "");
+  const q = String(f.get("q") ?? "");
+  const back = (extra: string) => `/admin/settings/employees?emp=${encodeURIComponent(id)}${q ? `&q=${encodeURIComponent(q)}` : ""}&${extra}`;
+  if (!id) redirect("/admin/settings/employees");
+
+  const db = createAdminClient();
+  const { data: emp, error } = await db.from("employees").select("id, role").eq("organization_id", me.organization_id).eq("id", id).maybeSingle();
+  if (error) redirect(back(`err=${/permissions/.test(error.message) ? "migration" : "db"}`));
+  if (!emp) redirect("/admin/settings/employees");
+  if ((emp.role as Role) === "admin") redirect(back("saved=0")); // админ үргэлж бүх эрхтэй
+
+  const valid = new Set<string>(APPS.flatMap((a) => a.perms.map((p) => p.key)));
+  const checked = f.getAll("perm").map(String).filter((p) => valid.has(p));
+  const next = [...new Set([...checked, ...APPS.map((a) => appMarker(a.key))])].sort();
+  const { error: upErr } = await db.from("employees").update({ permissions: next }).eq("organization_id", me.organization_id).eq("id", id);
+  if (upErr) redirect(back("err=db"));
+  revalidatePath("/", "layout");
+  redirect(back("saved=1"));
+}

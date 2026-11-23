@@ -48,7 +48,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
         </p>
       )}
       <p className="text-xs text-gray-500">
-        Компани, алба хэлтэс, салбарыг <Link href="/admin/settings/structure" className="text-brand underline">Алба хэлтэс</Link>, координатыг{" "}
+        Компани, алба хэлтэс, салбарыг <Link href="/admin/structure" className="text-brand underline">Алба хэлтэс</Link>, координатыг{" "}
         <Link href="/app/locations" className="text-brand underline">Байршил</Link> цэснээс нэмнэ.
       </p>
       <div>

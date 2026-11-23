@@ -5,7 +5,7 @@ import type { Company, Department, Unit } from "@/lib/types";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Icon } from "@/components/icons";
 import { Modal } from "@/components/modal";
-import { deleteCompany, deleteDepartment, deleteUnit, saveCompany, saveDepartment, saveUnit } from "../../actions";
+import { deleteCompany, deleteDepartment, deleteUnit, saveCompany, saveDepartment, saveUnit } from "../actions";
 
 function Count({ n, dark = false }: { n: number; dark?: boolean }) {
   return (
@@ -156,6 +156,7 @@ export default async function StructurePage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-4">
+      <h1 className="text-2xl font-bold">Алба хэлтэс</h1>
       {/* Толгой: табууд + үйлдэл */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200">
         <nav className="flex gap-1">

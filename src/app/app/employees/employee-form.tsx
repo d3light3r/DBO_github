@@ -100,7 +100,7 @@ export function EmployeeForm({ companies, departments, units, branches, schedule
         </div>
         {unit?.is_station && <p className="text-xs text-emerald-700">⛽ ШТС салбар: энэ ажилтан «{unit.name}»-ийн ШТС апп-д орно.</p>}
         {companies.length === 0 && (
-          <p className="text-xs text-brand">Эхлээд <Link href="/admin/settings/structure" className="underline">Тохиргоо → Компани, бүтэц</Link> хэсгээс компани нэмнэ үү.</p>
+          <p className="text-xs text-brand">Эхлээд <Link href="/admin/structure" className="underline">Алба хэлтэс</Link> хэсгээс компани нэмнэ үү.</p>
         )}
       </fieldset>
       <Select name="branch_id" label="📍 Координат (ирц бүртгэх цэг)" options={branches} value={e?.branch_id} />

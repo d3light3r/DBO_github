@@ -1,6 +1,7 @@
+import { redirect } from "next/navigation";
 import { getCurrentEmployee } from "@/lib/auth";
 import { reviewableEmployeeIds } from "@/lib/approvals";
-import { ATTENDANCE_TABS, permsOf } from "@/lib/permissions";
+import { ATTENDANCE_TABS, hasApp, homeFor, permsOf } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppShell } from "@/components/app-shell";
 import type { NavItem } from "@/components/side-nav";
@@ -8,6 +9,8 @@ import type { NavItem } from "@/components/side-nav";
 /** Цаг бүртгэл апп: ирц бүртгүүлэх + (эрхтэй бол) ирц хянах, хүсэлт, тайлан, ажилтан, хуваарь */
 export default async function AttendanceAppLayout({ children }: { children: React.ReactNode }) {
   const emp = await getCurrentEmployee();
+  // Цаг бүртгэл апп-д нэмэгдээгүй ажилтан (Тохиргоо → Ажилтнаар) энэ апп руу орохгүй
+  if (!hasApp(emp, "attendance")) redirect(homeFor(emp));
   const perms = permsOf(emp);
 
   // Цэсний тэмдэг: хүлээгдэж буй хүсэлт, утас

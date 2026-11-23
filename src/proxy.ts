@@ -24,9 +24,9 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims: токеныг локалаар шалгаж, хугацаа дуусах гэж байвал сэргээнэ (getUser шиг сүлжээ хүлээхгүй)
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub;
 
   const path = request.nextUrl.pathname;
   if (!user && (path.startsWith("/app") || path.startsWith("/admin") || path.startsWith("/station") || path.startsWith("/talon"))) {

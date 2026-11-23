@@ -37,7 +37,7 @@ export default async function StationHome() {
         <p className="text-xs text-gray-500">Станц бүрийн харьяалал, ажилтан, ээлжийн төлөв. Станц дээр дарж ээлж, тайлан, тохиргоо руу орно.</p>
         {isAdmin && (
           <p className="mt-1 text-xs text-gray-500">
-            Шинэ ШТС: <Link href="/admin/settings/structure" className="text-brand underline">Тохиргоо → Компани, бүтэц</Link>-ээс салбар нэмж «⛽ ШТС» гэж
+            Шинэ ШТС: <Link href="/admin/structure" className="text-brand underline">Алба хэлтэс</Link>-ээс салбар нэмж «⛽ ШТС» гэж
             тэмдэглэнэ. Ажилтныг <Link href="/app/employees" className="text-brand underline">Ажилтан</Link> хэсгээс тухайн салбарт оноо.
           </p>
         )}
